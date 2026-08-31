@@ -1,0 +1,26 @@
+flowchart TD
+  subgraph ProfilDemandeur["Profil demandeur d'emploi (TKT-002)"]
+    PD1["Création du profil"] --> PD2["Utilisation active\n(candidatures, SPEC-005)"]
+    PD2 --> PD3["Suppression de compte\n(TKT-015)"]
+  end
+
+  subgraph CompteEmployeur["Compte employeur (TKT-003)"]
+    CE1["Création + statut de vérification"] --> CE2["Utilisation active\n(publication, gestion)"]
+    CE2 --> CE3["Suppression de compte\n(TKT-015)"]
+    CE2 -.->|"Suspension admin\n(TKT-012)"| CE4["Accès révoqué"]
+  end
+
+  subgraph Annonce["Annonce (TKT-004)"]
+    A1["Publication"] --> A2["Visible sur la carte\n(max 30 jours)"]
+    A2 --> A3["Archivage automatique\n(TKT-014)"]
+    A2 -.->|"Retrait par modération\n(TKT-011)"| A4["Retirée"]
+  end
+
+  subgraph Candidature["Candidature (TKT-005)"]
+    C1["Création\n(profil transmis)"] --> C2["Suivi actif\n(TKT-006, TKT-008)"]
+    C2 --> C3["Devenir si le compte lié\nest supprimé :\nQUESTION OUVERTE (OQ-001)"]
+  end
+
+  PD3 -.-> C3
+  CE3 -.-> C3
+  A3 -.->|"Candidature conservée,\nannonce non recherchable"| C2
