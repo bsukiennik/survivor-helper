@@ -73,3 +73,31 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-3-consent-gate-before-device-geolocation.md`
   summary: No literal "manual location/commune search" UI exists on consent decline — the epics AC names this explicitly, but declining currently just leaves the existing pannable/zoomable France-wide map, which the team judged to satisfy "browsing still works" without a dedicated search box.
   evidence: User decision during Story 1.3 review — build the real commune search as its own future story rather than folding it into this consent-gate change.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-1-job-seeker-account-creation.md`
+  summary: No rate limiting/lockout on POST /auth/login or /auth/register — open to credential-stuffing and registration spam.
+  evidence: Blind-hunter review — needs a rate-limiting library/middleware decision, not a trivial patch.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-1-job-seeker-account-creation.md`
+  summary: No email verification step — accounts are usable immediately with an unconfirmed address.
+  evidence: Blind-hunter review — would need email-sending infra, which the PRD's sovereignty constraint restricts to a self-hosted relay (not built yet).
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-1-job-seeker-account-creation.md`
+  summary: No password-reset ("forgot password") flow — a Job Seeker who forgets their password has no way back into their account.
+  evidence: Blind-hunter review — same email-infra dependency as email verification.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-1-job-seeker-account-creation.md`
+  summary: No token revocation strategy (24h JWT can't be invalidated early; "logout" is client-side localStorage removal only) and no frontend handling of an expired/invalidated token during an open session (no 401 interceptor).
+  evidence: Blind-hunter review — meaningful scope (refresh tokens or a blocklist), revisit once more of the app is behind auth and the exposure is worth the complexity.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-1-job-seeker-account-creation.md`
+  summary: JWT stored in localStorage (readable by any script on the page) rather than an httpOnly cookie — consistent with AD-4's bearer-token-in-header design, but the XSS tradeoff was never explicitly discussed.
+  evidence: Blind-hunter review — flagged for awareness, not changed, since it follows the already-adopted architecture decision (AD-4).
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-1-job-seeker-account-creation.md`
+  summary: No guard against an already-authenticated user re-submitting /register or /login — they can silently overwrite their stored session with a new one.
+  evidence: Blind-hunter review — low impact, minor UX polish.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-1-job-seeker-account-creation.md`
+  summary: RolesGuard (AD-15) is opt-in per route (@UseGuards + @Roles), not registered globally — a future author must remember to add both on a new sensitive route, with no "deny unless explicitly public" default.
+  evidence: Blind-hunter review — this matches the architecture spine's stated design (AD-15 describes per-route gating, not a global guard), so changing it would be an architectural decision, not a patch; revisit if Epic 3/5's protected routes reveal this is error-prone in practice.

@@ -2,9 +2,11 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useRef, useState } from 'react';
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
+import { Link } from 'react-router';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+import { clearAuth, readStoredAuth, type StoredAuth } from '../seeker/auth-token';
 import { ConsentBanner } from './ConsentBanner';
 import { readStoredConsent, recordConsent } from './geolocation-consent';
 
@@ -77,6 +79,12 @@ export function MapView(): React.JSX.Element {
   const [listings, setListings] = useState<ListingDto[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showConsentBanner, setShowConsentBanner] = useState(false);
+  const [auth, setAuth] = useState<StoredAuth | null>(() => readStoredAuth());
+
+  function handleLogout(): void {
+    clearAuth();
+    setAuth(null);
+  }
   const [locatingDevice, setLocatingDevice] = useState(false);
   const [mapCenter, setMapCenter] = useState<[number, number]>(FRANCE_CENTER);
   const [mapZoom, setMapZoom] = useState(FRANCE_DEFAULT_ZOOM);
@@ -173,8 +181,20 @@ export function MapView(): React.JSX.Element {
 
   return (
     <div className="flex h-screen w-screen flex-col">
-      <header className="border-b border-slate-200 bg-white px-4 py-3">
+      <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
         <h1 className="text-lg font-semibold text-slate-900">GéoEmploi</h1>
+        {auth ? (
+          <div className="flex items-center gap-3 text-sm text-slate-700">
+            <span>{auth.email}</span>
+            <button type="button" onClick={handleLogout} className="text-slate-600 underline">
+              Se déconnecter
+            </button>
+          </div>
+        ) : (
+          <Link to="/login" className="text-sm font-medium text-amber-700 underline">
+            Se connecter
+          </Link>
+        )}
       </header>
       {showConsentBanner ? (
         <ConsentBanner onAccept={handleAcceptConsent} onDecline={handleDeclineConsent} />

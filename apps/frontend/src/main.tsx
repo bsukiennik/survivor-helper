@@ -1,7 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { RouterProvider } from 'react-router/dom';
 import { ErrorBoundary } from './ErrorBoundary';
-import { MapView } from './map/MapView';
+import { router } from './router';
 import './index.css';
 
 const rootElement = document.getElementById('root');
@@ -12,7 +13,7 @@ if (!rootElement) {
 createRoot(rootElement).render(
   <StrictMode>
     <ErrorBoundary>
-      <MapView />
+      <RouterProvider router={router} />
     </ErrorBoundary>
   </StrictMode>,
 );

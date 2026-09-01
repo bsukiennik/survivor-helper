@@ -1,8 +1,20 @@
 import L from 'leaflet';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router';
+import { readStoredAuth } from '../seeker/auth-token';
 import { readStoredConsent } from './geolocation-consent';
 import { MapView } from './MapView';
+
+// MapView now renders react-router's <Link> (Story 2.1), which needs a
+// router context even when MapView itself isn't route-matched in a test.
+function renderMapView(): ReturnType<typeof render> {
+  return render(
+    <MemoryRouter>
+      <MapView />
+    </MemoryRouter>,
+  );
+}
 
 describe('MapView', () => {
   afterEach(() => {
@@ -54,7 +66,7 @@ describe('MapView', () => {
       })),
     );
 
-    render(<MapView />);
+    renderMapView();
 
     expect(screen.getByRole('heading', { name: 'GéoEmploi' })).toBeTruthy();
     expect(screen.queryByText(/login/i)).toBeNull();
@@ -85,7 +97,7 @@ describe('MapView', () => {
       })),
     );
 
-    const { container } = render(<MapView />);
+    const { container } = renderMapView();
 
     await waitFor(() => {
       expect(container.querySelector('.leaflet-marker-icon')).toBeTruthy();
@@ -115,7 +127,7 @@ describe('MapView', () => {
       }),
     );
 
-    render(<MapView />);
+    renderMapView();
 
     // Map/page must not go blank — heading still renders.
     expect(screen.getByRole('heading', { name: 'GéoEmploi' })).toBeTruthy();
@@ -137,7 +149,7 @@ describe('MapView', () => {
       })),
     );
 
-    render(<MapView />);
+    renderMapView();
 
     expect(screen.getByRole('heading', { name: 'GéoEmploi' })).toBeTruthy();
 
@@ -152,7 +164,7 @@ describe('MapView', () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] })));
     const geolocation = stubGeolocation();
 
-    render(<MapView />);
+    renderMapView();
 
     expect(screen.getByRole('dialog')).toBeTruthy();
     expect(geolocation.getCurrentPosition).not.toHaveBeenCalled();
@@ -162,7 +174,7 @@ describe('MapView', () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] })));
     const geolocation = stubGeolocation();
 
-    render(<MapView />);
+    renderMapView();
 
     fireEvent.click(screen.getByRole('button', { name: 'Accepter' }));
 
@@ -174,7 +186,7 @@ describe('MapView', () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] })));
     const geolocation = stubGeolocation();
 
-    render(<MapView />);
+    renderMapView();
 
     fireEvent.click(screen.getByRole('button', { name: 'Refuser' }));
 
@@ -191,7 +203,7 @@ describe('MapView', () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] })));
     const geolocation = stubGeolocation();
 
-    render(<MapView />);
+    renderMapView();
 
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(geolocation.getCurrentPosition).not.toHaveBeenCalled();
@@ -202,7 +214,7 @@ describe('MapView', () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] })));
     stubGeolocation();
 
-    render(<MapView />);
+    renderMapView();
     fireEvent.click(screen.getByRole('button', { name: 'Accepter' }));
 
     expect(readStoredConsent()?.choice).toBe('accepted');
@@ -217,7 +229,7 @@ describe('MapView', () => {
       } as GeolocationPosition);
     });
 
-    render(<MapView />);
+    renderMapView();
     fireEvent.click(screen.getByRole('button', { name: 'Accepter' }));
 
     await waitFor(() => {
@@ -233,11 +245,40 @@ describe('MapView', () => {
       error?.({ code: 1, message: 'User denied Geolocation' } as GeolocationPositionError);
     });
 
-    render(<MapView />);
+    renderMapView();
     fireEvent.click(screen.getByRole('button', { name: 'Accepter' }));
 
     await waitFor(() => {
       expect(screen.queryByText('Localisation en cours…')).toBeNull();
     });
+  });
+
+  it('shows a "Se connecter" link to /login when no account is logged in', () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] })));
+
+    renderMapView();
+
+    const link = screen.getByRole('link', { name: 'Se connecter' });
+    expect(link.getAttribute('href')).toBe('/login');
+    expect(screen.queryByText('Se déconnecter')).toBeNull();
+  });
+
+  it('shows the account email and a working logout button when an account is logged in', () => {
+    stubWorkingLocalStorage();
+    localStorage.setItem(
+      'geoemploi.auth',
+      JSON.stringify({ accessToken: 'token-abc', email: 'a@b.com' }),
+    );
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] })));
+
+    renderMapView();
+
+    expect(screen.getByText('a@b.com')).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Se connecter' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Se déconnecter' }));
+
+    expect(screen.getByRole('link', { name: 'Se connecter' })).toBeTruthy();
+    expect(readStoredAuth()).toBeNull();
   });
 });
