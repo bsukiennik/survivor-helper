@@ -141,8 +141,8 @@ Authenticated Job Seeker sees Listings on the map as interactive markers; select
 #### FR-6: Direct application
 Job Seeker can apply to a Listing directly in-app; their profile (FR-4) is transmitted to the Employer.
 
-#### FR-7: Catch count & badges
-System tracks a per-Job-Seeker Catch count, computed server-side from the authoritative count of that Job Seeker's Applications (FR-5's uniqueness constraint applies) — never client-reported or client-incremented — and awards Badges at milestone thresholds. `[ASSUMPTION: intermediate milestones (e.g. 1st and 5th catch) beyond the ministry-specified 10th are invented for a believable badge ladder — confirm or drop]`.
+#### FR-7: Catch count & Permis de Travail badge
+System tracks a per-Job-Seeker Catch count, computed server-side from the authoritative count of that Job Seeker's Applications (FR-5's uniqueness constraint applies) — never client-reported or client-incremented. The 10th catch is the only Badge threshold (FR-8's Permis de Travail) — no intermediate milestones. `[CONFIRMED: dropped the invented intermediate-milestone ladder — 10th catch only, matching exactly what the ministry specified.]`
 **Consequences (testable):**
 - Catch-count and Badge/Permis de Travail evaluation happen atomically as part of the Application-creation transaction, so a double-tap or two open tabs on the 9th→10th Catch cannot skip or double-fire the unlock.
 - Each Catch/Application-creation event is logged (Job Seeker, Listing, timestamp) for audit purposes.
@@ -417,7 +417,7 @@ Every screen and generated artifact follows the ministerial charter: institution
 ## 13. Assumptions Index
 
 - §4.3 FR-5 — Catch is a map-selection interaction with no device-proximity/timing gate in v1; the minister's "walk toward it" framing is treated as UX flavor, not a hard requirement.
-- §4.3 FR-7 — Intermediate badge milestones (before the 10th-catch Permis de Travail) invented for a believable ladder.
+- ~~§4.3 FR-7 — Intermediate badge milestones (before the 10th-catch Permis de Travail) invented for a believable ladder.~~ Confirmed dropped during Story 2.4 planning (2026-09-01) — 10th catch is the only threshold.
 - §4.4 FR-10 — Employer verification method not specified; assumed to require a concrete mechanism (e.g. company registration number) pending confirmation.
 - §4.10 FR-21 — Time-boxed retention exception's exact duration not specified; needs a concrete value from legal (Open Question 3).
 - §9 — Standard tier's baseline Distribution Radius set to 10 km as a working default; not confirmed by either source.

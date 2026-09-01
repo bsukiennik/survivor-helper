@@ -22,7 +22,14 @@ import { listingsTable } from './listing.schema.js';
 const TEST_EMAIL = '__test__application-repository@example.com';
 const TEST_LISTING_A = '99999999-9999-4999-8999-000000000101';
 const TEST_LISTING_B = '99999999-9999-4999-8999-000000000102';
-const TEST_LISTING_IDS = [TEST_LISTING_A, TEST_LISTING_B];
+// 9 seed listings for the 9th→10th-threshold race test below — distinct
+// from A/B so that test's two concurrent catches (on A and B) are each
+// genuinely the Job Seeker's 10th and 11th distinct catch.
+const TEST_LISTING_SEED = Array.from(
+  { length: 9 },
+  (_, i) => `99999999-9999-4999-8999-0000000001${String(i + 3).padStart(2, '0')}`,
+);
+const TEST_LISTING_IDS = [TEST_LISTING_A, TEST_LISTING_B, ...TEST_LISTING_SEED];
 
 let testAccountId = '';
 
@@ -40,28 +47,18 @@ describe('DrizzleApplicationRepository (integration, real Postgres)', () => {
 
     await db
       .insert(listingsTable)
-      .values([
-        {
-          id: TEST_LISTING_A,
-          title: '__test__ listing A',
+      .values(
+        [TEST_LISTING_A, TEST_LISTING_B, ...TEST_LISTING_SEED].map((id, index) => ({
+          id,
+          title: `__test__ listing ${index}`,
           employerName: 'Test Co',
           location: 'Testville',
           description: 'seeded by application.repository.spec.ts',
           latitude: 0,
           longitude: 0,
-          status: 'published',
-        },
-        {
-          id: TEST_LISTING_B,
-          title: '__test__ listing B',
-          employerName: 'Test Co',
-          location: 'Testville',
-          description: 'seeded by application.repository.spec.ts',
-          latitude: 0,
-          longitude: 0,
-          status: 'published',
-        },
-      ])
+          status: 'published' as const,
+        })),
+      )
       .onConflictDoNothing();
   });
 
@@ -78,7 +75,7 @@ describe('DrizzleApplicationRepository (integration, real Postgres)', () => {
     await closeDb();
   });
 
-  it('creates an Application row on first catch', async () => {
+  it('creates an Application row and returns catchCount 1 on first catch', async () => {
     const repository = new DrizzleApplicationRepository();
 
     const created = await repository.applyToListing({
@@ -87,15 +84,28 @@ describe('DrizzleApplicationRepository (integration, real Postgres)', () => {
     });
 
     expect(created).not.toBeNull();
-    expect(created?.jobSeekerId).toBe(testAccountId);
-    expect(created?.listingId).toBe(TEST_LISTING_A);
-    expect(created?.status).toBe('submitted');
+    expect(created?.application.jobSeekerId).toBe(testAccountId);
+    expect(created?.application.listingId).toBe(TEST_LISTING_A);
+    expect(created?.application.status).toBe('submitted');
+    expect(created?.catchCount).toBe(1);
 
     const rows = await getDb()
       .select()
       .from(applicationsTable)
       .where(eq(applicationsTable.jobSeekerId, testAccountId));
     expect(rows).toHaveLength(1);
+  });
+
+  it('countByJobSeeker matches the persisted Application count, standalone (no transaction)', async () => {
+    const repository = new DrizzleApplicationRepository();
+
+    expect(await repository.countByJobSeeker(testAccountId)).toBe(0);
+
+    await repository.applyToListing({ jobSeekerId: testAccountId, listingId: TEST_LISTING_A });
+    expect(await repository.countByJobSeeker(testAccountId)).toBe(1);
+
+    await repository.applyToListing({ jobSeekerId: testAccountId, listingId: TEST_LISTING_B });
+    expect(await repository.countByJobSeeker(testAccountId)).toBe(2);
   });
 
   it('returns null and inserts no second row on a repeat catch of the same pair', async () => {
@@ -131,6 +141,34 @@ describe('DrizzleApplicationRepository (integration, real Postgres)', () => {
       .where(eq(applicationsTable.jobSeekerId, testAccountId));
     const listingIds = rows.map((row) => row.listingId).sort();
     expect(listingIds).toEqual([TEST_LISTING_A, TEST_LISTING_B].sort());
+  });
+
+  it('exactly-once 9th→10th race: two concurrent catches on different Listings yield exactly one catchCount 10', async () => {
+    const repository = new DrizzleApplicationRepository();
+
+    // 9 prior distinct catches, sequential so the count is deterministic
+    // before the race starts.
+    for (const listingId of TEST_LISTING_SEED) {
+      const seeded = await repository.applyToListing({ jobSeekerId: testAccountId, listingId });
+      expect(seeded).not.toBeNull();
+    }
+    expect(await repository.countByJobSeeker(testAccountId)).toBe(9);
+
+    // The 9th→10th threshold race (Boundaries & Constraints, Design
+    // Notes): two different-Listing catches by the same Job Seeker fired
+    // concurrently. Story 2.3's account-row `FOR UPDATE` lock serializes
+    // the two transactions, so this must yield exactly one catchCount 10
+    // and one catchCount 11 — never two 10s, never zero.
+    const [resultA, resultB] = await Promise.all([
+      repository.applyToListing({ jobSeekerId: testAccountId, listingId: TEST_LISTING_A }),
+      repository.applyToListing({ jobSeekerId: testAccountId, listingId: TEST_LISTING_B }),
+    ]);
+
+    expect(resultA).not.toBeNull();
+    expect(resultB).not.toBeNull();
+    const catchCounts = [resultA?.catchCount, resultB?.catchCount].sort((a, b) => (a ?? 0) - (b ?? 0));
+    expect(catchCounts).toEqual([10, 11]);
+    expect(await repository.countByJobSeeker(testAccountId)).toBe(11);
   });
 
   it('blocks a concurrent applyToListing while another transaction holds the account row lock', async () => {

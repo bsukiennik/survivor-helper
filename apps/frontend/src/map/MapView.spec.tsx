@@ -372,6 +372,29 @@ describe('MapView', () => {
     expect(screen.queryByRole('button', { name: 'Postuler' })).toBeNull();
   });
 
+  it('shows the distinct Permis de Travail confirmation when the response reports permisDeTravailUnlocked: true', async () => {
+    const fetchMock = stubAuthenticatedFetch(() => ({
+      ok: true,
+      status: 201,
+      json: async () => ({
+        id: 'app-10',
+        listingId: 'listing-1',
+        alreadyApplied: false,
+        catchCount: 10,
+        permisDeTravailUnlocked: true,
+      }),
+    }));
+
+    await renderWithLoggedInAccountAndOpenPopup(fetchMock);
+    fireEvent.click(screen.getByRole('button', { name: /Catch/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Permis de Travail débloqué/)).toBeTruthy();
+    });
+    // Distinct from the routine confirmation, not shown alongside it.
+    expect(screen.queryByText('Candidature envoyée !')).toBeNull();
+  });
+
   it('plain Postuler hits the same endpoint as Catch', async () => {
     const fetchMock = stubAuthenticatedFetch(() => ({
       ok: true,
@@ -432,5 +455,23 @@ describe('MapView', () => {
     renderMapView();
     const link = screen.getByRole('link', { name: 'Mon profil' });
     expect(link.getAttribute('href')).toBe('/profile');
+  });
+
+  it('shows a "Mes badges" link to /badges only when an account is logged in', () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] })));
+
+    renderMapView();
+    expect(screen.queryByRole('link', { name: 'Mes badges' })).toBeNull();
+
+    cleanup();
+    stubWorkingLocalStorage();
+    localStorage.setItem(
+      'geoemploi.auth',
+      JSON.stringify({ accessToken: 'token-abc', email: 'a@b.com' }),
+    );
+
+    renderMapView();
+    const link = screen.getByRole('link', { name: 'Mes badges' });
+    expect(link.getAttribute('href')).toBe('/badges');
   });
 });

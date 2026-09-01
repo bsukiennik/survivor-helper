@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import type { Response } from 'express';
 import { describe, expect, it, vi } from 'vitest';
+import type { ApplyToListingResult } from '../../application/application/apply-to-listing.use-case.js';
 import { ApplyToListingUseCase } from '../../application/application/apply-to-listing.use-case.js';
 import type { Application } from '../../domain/application/application.entity.js';
 import { ListingNotFoundError } from '../../domain/listing/listing-not-found.error.js';
@@ -18,7 +19,15 @@ const APPLICATION: Application = {
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
 };
 
-function makeUseCaseStub(execute: () => Promise<Application | null>): ApplyToListingUseCase {
+const RESULT: ApplyToListingResult = {
+  application: APPLICATION,
+  catchCount: 1,
+  permisDeTravailUnlocked: false,
+};
+
+function makeUseCaseStub(
+  execute: () => Promise<ApplyToListingResult | null>,
+): ApplyToListingUseCase {
   return { execute } as unknown as ApplyToListingUseCase;
 }
 
@@ -35,24 +44,54 @@ function makeDto(listingId: string): CatchDto {
 }
 
 describe('ApplicationController', () => {
-  it('responds 201 with the created Application on first catch', async () => {
-    const controller = new ApplicationController(makeUseCaseStub(async () => APPLICATION));
+  it('responds 201 with the created Application and catchCount on first catch', async () => {
+    const controller = new ApplicationController(makeUseCaseStub(async () => RESULT));
     const res = makeResStub();
 
     const result = await controller.apply(USER, makeDto('listing-1'), res);
 
     expect(res.status).toHaveBeenCalledWith(201);
-    expect(result).toEqual({ id: 'application-1', listingId: 'listing-1', alreadyApplied: false });
+    expect(result).toEqual({
+      id: 'application-1',
+      listingId: 'listing-1',
+      alreadyApplied: false,
+      catchCount: 1,
+      permisDeTravailUnlocked: false,
+    });
   });
 
-  it('responds 200 with alreadyApplied: true on a repeat catch, no error', async () => {
+  it('responds 201 with permisDeTravailUnlocked: true on the 10th catch', async () => {
+    const controller = new ApplicationController(
+      makeUseCaseStub(async () => ({ ...RESULT, catchCount: 10, permisDeTravailUnlocked: true })),
+    );
+    const res = makeResStub();
+
+    const result = await controller.apply(USER, makeDto('listing-1'), res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(result).toEqual({
+      id: 'application-1',
+      listingId: 'listing-1',
+      alreadyApplied: false,
+      catchCount: 10,
+      permisDeTravailUnlocked: true,
+    });
+  });
+
+  it('responds 200 with alreadyApplied: true, catchCount: null, permisDeTravailUnlocked: false on a repeat catch, no error', async () => {
     const controller = new ApplicationController(makeUseCaseStub(async () => null));
     const res = makeResStub();
 
     const result = await controller.apply(USER, makeDto('listing-1'), res);
 
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(result).toEqual({ id: null, listingId: 'listing-1', alreadyApplied: true });
+    expect(result).toEqual({
+      id: null,
+      listingId: 'listing-1',
+      alreadyApplied: true,
+      catchCount: null,
+      permisDeTravailUnlocked: false,
+    });
   });
 
   it('maps ListingNotFoundError to a 404 NotFoundException', async () => {
@@ -73,7 +112,7 @@ describe('ApplicationController', () => {
     const useCase = {
       execute: async (input: unknown) => {
         executedWith = input;
-        return APPLICATION;
+        return RESULT;
       },
     } as unknown as ApplyToListingUseCase;
     const controller = new ApplicationController(useCase);

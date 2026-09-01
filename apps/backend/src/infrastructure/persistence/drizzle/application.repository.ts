@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { count, eq } from 'drizzle-orm';
 import type { ApplicationRepositoryPort } from '../../../application/ports/application-repository.port.js';
 import type { Application } from '../../../domain/application/application.entity.js';
 import { accountsTable } from './account.schema.js';
@@ -17,7 +17,7 @@ export class DrizzleApplicationRepository implements ApplicationRepositoryPort {
   async applyToListing(input: {
     jobSeekerId: string;
     listingId: string;
-  }): Promise<Application | null> {
+  }): Promise<{ application: Application; catchCount: number } | null> {
     return getDb().transaction(async (tx) => {
       await tx
         .select()
@@ -33,8 +33,31 @@ export class DrizzleApplicationRepository implements ApplicationRepositoryPort {
         })
         .returning();
 
-      return row ? this.toDomain(row) : null;
+      if (!row) {
+        return null;
+      }
+
+      // Story 2.4: recompute the authoritative catch count in the same
+      // `tx`, right after the insert, still holding the account-row lock —
+      // this is what serializes the 9th→10th unlock race (Design Notes).
+      const [{ value: catchCount }] = await tx
+        .select({ value: count() })
+        .from(applicationsTable)
+        .where(eq(applicationsTable.jobSeekerId, input.jobSeekerId));
+
+      return { application: this.toDomain(row), catchCount };
     });
+  }
+
+  // Plain (non-transactional) count for `GET /me/badges` — same
+  // count-query shape as the in-transaction one above, outside any
+  // transaction/lock.
+  async countByJobSeeker(jobSeekerId: string): Promise<number> {
+    const [{ value }] = await getDb()
+      .select({ value: count() })
+      .from(applicationsTable)
+      .where(eq(applicationsTable.jobSeekerId, jobSeekerId));
+    return value;
   }
 
   private toDomain(row: typeof applicationsTable.$inferSelect): Application {

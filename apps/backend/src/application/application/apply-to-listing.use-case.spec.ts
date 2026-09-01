@@ -38,7 +38,8 @@ function makeApplicationRepository(
   overrides: Partial<ApplicationRepositoryPort> = {},
 ): ApplicationRepositoryPort {
   return {
-    applyToListing: async () => APPLICATION,
+    applyToListing: async () => ({ application: APPLICATION, catchCount: 1 }),
+    countByJobSeeker: async () => 0,
     ...overrides,
   };
 }
@@ -48,9 +49,9 @@ describe('ApplyToListingUseCase', () => {
     vi.restoreAllMocks();
   });
 
-  it('creates the Application, returns it, and logs exactly once on first catch', async () => {
+  it('creates the Application, returns it with catchCount, and logs exactly once on first catch', async () => {
     const logSpy = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
-    const applyToListing = vi.fn(async () => APPLICATION);
+    const applyToListing = vi.fn(async () => ({ application: APPLICATION, catchCount: 1 }));
     const useCase = new ApplyToListingUseCase(
       makeListingRepository(),
       makeApplicationRepository({ applyToListing }),
@@ -58,11 +59,53 @@ describe('ApplyToListingUseCase', () => {
 
     const result = await useCase.execute({ jobSeekerId: 'account-1', listingId: 'listing-1' });
 
-    expect(result).toEqual(APPLICATION);
+    expect(result).toEqual({
+      application: APPLICATION,
+      catchCount: 1,
+      permisDeTravailUnlocked: false,
+    });
     expect(applyToListing).toHaveBeenCalledWith({ jobSeekerId: 'account-1', listingId: 'listing-1' });
     expect(logSpy).toHaveBeenCalledTimes(1);
     expect(logSpy.mock.calls[0][0]).toContain('account-1');
     expect(logSpy.mock.calls[0][0]).toContain('listing-1');
+  });
+
+  it('sets permisDeTravailUnlocked: true and logs a second distinct line exactly on the 10th catch', async () => {
+    const logSpy = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    const applyToListing = vi.fn(async () => ({ application: APPLICATION, catchCount: 10 }));
+    const useCase = new ApplyToListingUseCase(
+      makeListingRepository(),
+      makeApplicationRepository({ applyToListing }),
+    );
+
+    const result = await useCase.execute({ jobSeekerId: 'account-1', listingId: 'listing-1' });
+
+    expect(result).toEqual({
+      application: APPLICATION,
+      catchCount: 10,
+      permisDeTravailUnlocked: true,
+    });
+    expect(logSpy).toHaveBeenCalledTimes(2);
+    expect(logSpy.mock.calls[1][0]).toContain('Permis de Travail unlocked');
+    expect(logSpy.mock.calls[1][0]).toContain('account-1');
+  });
+
+  it('sets permisDeTravailUnlocked: false and does not re-fire the unlock log past the 10th catch', async () => {
+    const logSpy = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    const applyToListing = vi.fn(async () => ({ application: APPLICATION, catchCount: 11 }));
+    const useCase = new ApplyToListingUseCase(
+      makeListingRepository(),
+      makeApplicationRepository({ applyToListing }),
+    );
+
+    const result = await useCase.execute({ jobSeekerId: 'account-1', listingId: 'listing-1' });
+
+    expect(result).toEqual({
+      application: APPLICATION,
+      catchCount: 11,
+      permisDeTravailUnlocked: false,
+    });
+    expect(logSpy).toHaveBeenCalledTimes(1);
   });
 
   it('returns null and never logs on a repeat catch (already existed) — silent no-op, not an error', async () => {
@@ -80,7 +123,7 @@ describe('ApplyToListingUseCase', () => {
   });
 
   it('throws ListingNotFoundError and never opens the transaction when the listing does not exist', async () => {
-    const applyToListing = vi.fn(async () => APPLICATION);
+    const applyToListing = vi.fn(async () => ({ application: APPLICATION, catchCount: 1 }));
     const useCase = new ApplyToListingUseCase(
       makeListingRepository({ findById: async () => null }),
       makeApplicationRepository({ applyToListing }),
@@ -93,7 +136,7 @@ describe('ApplyToListingUseCase', () => {
   });
 
   it('throws ListingNotFoundError and never opens the transaction when the listing exists but is not published', async () => {
-    const applyToListing = vi.fn(async () => APPLICATION);
+    const applyToListing = vi.fn(async () => ({ application: APPLICATION, catchCount: 1 }));
     const archivedListing: Listing = { ...LISTING, status: 'archived' };
     const useCase = new ApplyToListingUseCase(
       makeListingRepository({ findById: async () => archivedListing }),

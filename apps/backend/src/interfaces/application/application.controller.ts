@@ -49,15 +49,15 @@ export class ApplicationController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<ApplicationResponseDto> {
     try {
-      const application = await this.applyToListing.execute({
+      const result = await this.applyToListing.execute({
         jobSeekerId: user.id,
         listingId: dto.listingId,
       });
 
       // First catch is 201 (created); a repeat catch is a silent 200
       // no-op, never an error (I/O matrix).
-      res.status(application ? 201 : 200);
-      return ApplicationResponseDto.fromResult(application, dto.listingId);
+      res.status(result ? 201 : 200);
+      return ApplicationResponseDto.fromResult(result, dto.listingId);
     } catch (error) {
       if (error instanceof ListingNotFoundError) {
         throw new NotFoundException(error.message);

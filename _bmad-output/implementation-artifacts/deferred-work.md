@@ -133,3 +133,11 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-3-catch-interaction-direct-application.md`
   summary: apps/backend/tsconfig.json excludes **/*.spec.ts from type-checking entirely, so a test file whose mocks fall out of sync with an interface (as happened here with ListingRepositoryPort.findById) compiles and runs "green" with a real type error hiding inside it.
   evidence: Verification-gap review — confirmed via a direct `tsc --noEmit --strict --ignoreConfig` run against the affected spec file, which surfaced two real TS2741 errors invisible to both `tsc --noEmit` (project config) and vitest (esbuild transpile-only, no type-checking).
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-4-catch-count-badges-permis-de-travail-unlock.md`
+  summary: catchCount (both the in-transaction and standalone countByJobSeeker queries) counts every applications row for a Job Seeker unconditionally, with no status filter — if Applications ever gain a withdrawn/cancelled/rejected state, catchCount would silently include them.
+  evidence: Blind-hunter review — not reachable today (Epic 3/Story 3.4 hasn't introduced any status transitions yet), but should be revisited exactly when that story lands.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-4-catch-count-badges-permis-de-travail-unlock.md`
+  summary: the "exactly-once" 9th→10th unlock guarantee is proven at the repository/transaction level (real Postgres, real row lock) but not through a full HTTP-request-path (controller/e2e) concurrency test — two real concurrent POST /me/applications requests racing through Nest's request pipeline has never been exercised.
+  evidence: Blind-hunter review — the repository-level integration test already exercises the actual locking mechanism, so this is lower-priority hardening, not a known gap in current coverage.

@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router';
 import { MapView } from './map/MapView';
 import { NotFound } from './NotFound';
+import { BadgesPage } from './seeker/BadgesPage';
 import { ProfilePage } from './seeker/ProfilePage';
 import { RegisterLoginPage } from './seeker/RegisterLoginPage';
 
@@ -14,5 +15,6 @@ export const router = createBrowserRouter([
   { path: '/register', element: <RegisterLoginPage /> },
   { path: '/login', element: <RegisterLoginPage /> },
   { path: '/profile', element: <ProfilePage /> },
+  { path: '/badges', element: <BadgesPage /> },
   { path: '*', element: <NotFound /> },
 ]);

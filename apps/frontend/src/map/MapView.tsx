@@ -40,10 +40,13 @@ interface ListingDto {
 }
 
 // Per-Listing state for the popup's Apply/Catch controls (Story 2.3) — keyed
-// by listing.id, tracked client-side only, reset on reload. `already-caught`
-// and `applied` are both terminal "no error" outcomes (I/O matrix): the
-// popup must never show a repeat catch as a failure.
-type ApplicationStatus = 'idle' | 'submitting' | 'applied' | 'already-caught' | 'error';
+// by listing.id, tracked client-side only, reset on reload. `already-caught`,
+// `applied`, and `unlocked` are all terminal "no error" outcomes (I/O
+// matrix): the popup must never show a repeat catch as a failure.
+// `unlocked` (Story 2.4) is `applied` plus the response's
+// `permisDeTravailUnlocked: true` — a distinct confirmation from a routine
+// catch, never re-fired past the 10th.
+type ApplicationStatus = 'idle' | 'submitting' | 'applied' | 'unlocked' | 'already-caught' | 'error';
 
 // A single Listing with a bad (non-finite/out-of-range) coordinate would
 // otherwise make Leaflet throw while rendering *all* markers, blanking the
@@ -109,11 +112,19 @@ export function MapView(): React.JSX.Element {
       if (!response.ok) {
         throw new Error(`Unexpected status ${response.status}`);
       }
-      const data = (await response.json()) as { alreadyApplied: boolean };
-      setApplicationStatus((prev) => ({
-        ...prev,
-        [listingId]: data.alreadyApplied ? 'already-caught' : 'applied',
-      }));
+      const data = (await response.json()) as {
+        alreadyApplied: boolean;
+        permisDeTravailUnlocked?: boolean;
+      };
+      let nextStatus: ApplicationStatus;
+      if (data.alreadyApplied) {
+        nextStatus = 'already-caught';
+      } else if (data.permisDeTravailUnlocked) {
+        nextStatus = 'unlocked';
+      } else {
+        nextStatus = 'applied';
+      }
+      setApplicationStatus((prev) => ({ ...prev, [listingId]: nextStatus }));
     } catch {
       setApplicationStatus((prev) => ({ ...prev, [listingId]: 'error' }));
     }
@@ -221,6 +232,9 @@ export function MapView(): React.JSX.Element {
             <Link to="/profile" className="font-medium text-amber-700 underline">
               Mon profil
             </Link>
+            <Link to="/badges" className="font-medium text-amber-700 underline">
+              Mes badges
+            </Link>
             <span>{auth.email}</span>
             <button type="button" onClick={handleLogout} className="text-slate-600 underline">
               Se déconnecter
@@ -279,7 +293,25 @@ export function MapView(): React.JSX.Element {
                     (() => {
                       const status = applicationStatus[listing.id] ?? 'idle';
                       const submitting = status === 'submitting';
-                      const caught = status === 'applied' || status === 'already-caught';
+                      const caught =
+                        status === 'applied' || status === 'unlocked' || status === 'already-caught';
+                      if (caught && status === 'unlocked') {
+                        // Distinct confirmation on the 10th catch (Story
+                        // 2.4, Boundaries & Constraints) — visually
+                        // different from the routine "Candidature envoyée !"
+                        // below, not just a text swap.
+                        return (
+                          <p
+                            role="status"
+                            className="mt-3 rounded border-2 border-amber-400 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800 shadow"
+                          >
+                            <span role="img" aria-label="Médaille">
+                              🏅
+                            </span>{' '}
+                            Permis de Travail débloqué !
+                          </p>
+                        );
+                      }
                       return caught ? (
                         <p className="mt-3 rounded bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700">
                           {status === 'already-caught'
