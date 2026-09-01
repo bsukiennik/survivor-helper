@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 09-01-2026 14:11
-last_updated: 09-01-2026 20:10
+last_updated: 09-01-2026 21:30
 project: GEOEMPLOI
 project_key: NOKEY
 tracking_system: file-system
@@ -44,7 +44,7 @@ development_status:
   epic-2: in-progress
   2-1-job-seeker-account-creation: review
   2-2-professional-profile-management: done
-  2-3-catch-interaction-direct-application: backlog
+  2-3-catch-interaction-direct-application: review
   2-4-catch-count-badges-permis-de-travail-unlock: backlog
   2-5-application-tracking: backlog
   epic-2-retrospective: optional

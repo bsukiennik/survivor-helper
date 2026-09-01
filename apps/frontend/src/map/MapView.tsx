@@ -6,7 +6,7 @@ import { Link } from 'react-router';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-import { clearAuth, readStoredAuth, type StoredAuth } from '../seeker/auth-token';
+import { authFetch, clearAuth, readStoredAuth, type StoredAuth } from '../seeker/auth-token';
 import { ConsentBanner } from './ConsentBanner';
 import { readStoredConsent, recordConsent } from './geolocation-consent';
 
@@ -38,6 +38,12 @@ interface ListingDto {
   longitude: number;
   status: 'published' | 'archived' | 'lapsed' | 'removed';
 }
+
+// Per-Listing state for the popup's Apply/Catch controls (Story 2.3) — keyed
+// by listing.id, tracked client-side only, reset on reload. `already-caught`
+// and `applied` are both terminal "no error" outcomes (I/O matrix): the
+// popup must never show a repeat catch as a failure.
+type ApplicationStatus = 'idle' | 'submitting' | 'applied' | 'already-caught' | 'error';
 
 // A single Listing with a bad (non-finite/out-of-range) coordinate would
 // otherwise make Leaflet throw while rendering *all* markers, blanking the
@@ -80,10 +86,37 @@ export function MapView(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [showConsentBanner, setShowConsentBanner] = useState(false);
   const [auth, setAuth] = useState<StoredAuth | null>(() => readStoredAuth());
+  const [applicationStatus, setApplicationStatus] = useState<Record<string, ApplicationStatus>>(
+    {},
+  );
 
   function handleLogout(): void {
     clearAuth();
     setAuth(null);
+  }
+
+  // Both the plain "Postuler" and the visually distinct "Catch" affordance
+  // call this same endpoint (Boundaries & Constraints) — a re-click on an
+  // already-caught Listing shows "already caught" state, not an error.
+  async function handleApply(listingId: string): Promise<void> {
+    setApplicationStatus((prev) => ({ ...prev, [listingId]: 'submitting' }));
+    try {
+      const response = await authFetch(`${API_BASE_URL}/me/applications`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ listingId }),
+      });
+      if (!response.ok) {
+        throw new Error(`Unexpected status ${response.status}`);
+      }
+      const data = (await response.json()) as { alreadyApplied: boolean };
+      setApplicationStatus((prev) => ({
+        ...prev,
+        [listingId]: data.alreadyApplied ? 'already-caught' : 'applied',
+      }));
+    } catch {
+      setApplicationStatus((prev) => ({ ...prev, [listingId]: 'error' }));
+    }
   }
   const [locatingDevice, setLocatingDevice] = useState(false);
   const [mapCenter, setMapCenter] = useState<[number, number]>(FRANCE_CENTER);
@@ -228,9 +261,9 @@ export function MapView(): React.JSX.Element {
           {listings.filter(hasValidCoordinates).map((listing) => (
             <Marker key={listing.id} position={[listing.latitude, listing.longitude]}>
               <Popup>
-                {/* Public listing detail (FR2) — Visitor-only view. Applying
-                    requires a Job Seeker account (Epic 2); the disabled
-                    button here is a scope boundary, not a working control. */}
+                {/* Public listing detail (FR2). Applying requires a Job
+                    Seeker account (Epic 2, Story 2.3) — logged-out visitors
+                    still see the disabled stub below. */}
                 <div className="max-h-64 max-w-xs overflow-y-auto">
                   <strong className="block text-sm font-semibold">{listing.title}</strong>
                   <p className="mt-1 text-sm text-slate-700">
@@ -242,21 +275,69 @@ export function MapView(): React.JSX.Element {
                     {listing.location}
                   </p>
                   <p className="mt-2 text-sm text-slate-800">{listing.description}</p>
-                  {/* `disabled` alone pulls the button out of the tab order,
-                      so screen-reader/keyboard users would never see the
-                      `title` tooltip explaining why — the reason is also
-                      rendered as visible text below the button. */}
-                  <button
-                    type="button"
-                    disabled
-                    aria-describedby={`apply-reason-${listing.id}`}
-                    className="mt-3 w-full cursor-not-allowed rounded bg-slate-200 px-3 py-1.5 text-sm font-medium text-slate-500"
-                  >
-                    Postuler — connexion requise
-                  </button>
-                  <p id={`apply-reason-${listing.id}`} className="mt-1 text-xs text-slate-500">
-                    Créez un compte demandeur d'emploi pour postuler.
-                  </p>
+                  {auth ? (
+                    (() => {
+                      const status = applicationStatus[listing.id] ?? 'idle';
+                      const submitting = status === 'submitting';
+                      const caught = status === 'applied' || status === 'already-caught';
+                      return caught ? (
+                        <p className="mt-3 rounded bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700">
+                          {status === 'already-caught'
+                            ? 'Déjà postulé à cette offre'
+                            : 'Candidature envoyée !'}
+                        </p>
+                      ) : (
+                        <>
+                          <div className="mt-3 flex gap-2">
+                            <button
+                              type="button"
+                              disabled={submitting}
+                              onClick={() => void handleApply(listing.id)}
+                              className="flex-1 rounded bg-slate-700 px-3 py-1.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              Postuler
+                            </button>
+                            {/* Visually distinct "Catch" affordance (Boundaries
+                                & Constraints) — same endpoint as plain
+                                Postuler, accent styling marks it as the
+                                "catch" gesture from Epic 2's map metaphor. */}
+                            <button
+                              type="button"
+                              disabled={submitting}
+                              onClick={() => void handleApply(listing.id)}
+                              title="Attrapez cette offre !"
+                              className="flex-1 rounded bg-amber-500 px-3 py-1.5 text-sm font-bold text-white shadow disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              🎣 Catch
+                            </button>
+                          </div>
+                          {status === 'error' ? (
+                            <p className="mt-1 text-xs text-red-600">
+                              Échec de la candidature, réessayez.
+                            </p>
+                          ) : null}
+                        </>
+                      );
+                    })()
+                  ) : (
+                    <>
+                      {/* `disabled` alone pulls the button out of the tab
+                          order, so screen-reader/keyboard users would never
+                          see the `title` tooltip explaining why — the reason
+                          is also rendered as visible text below the button. */}
+                      <button
+                        type="button"
+                        disabled
+                        aria-describedby={`apply-reason-${listing.id}`}
+                        className="mt-3 w-full cursor-not-allowed rounded bg-slate-200 px-3 py-1.5 text-sm font-medium text-slate-500"
+                      >
+                        Postuler — connexion requise
+                      </button>
+                      <p id={`apply-reason-${listing.id}`} className="mt-1 text-xs text-slate-500">
+                        Créez un compte demandeur d'emploi pour postuler.
+                      </p>
+                    </>
+                  )}
                 </div>
               </Popup>
             </Marker>

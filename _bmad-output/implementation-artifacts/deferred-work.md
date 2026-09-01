@@ -117,3 +117,19 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-2-professional-profile-management.md`
   summary: ProfilePage doesn't sync across browser tabs — if auth is cleared in one tab, another open tab keeps using the stale token until its next action fails.
   evidence: Edge-case review — niche, no `storage` event listener wired up.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-3-catch-interaction-direct-application.md`
+  summary: If a Listing or the caller's account is deleted between ApplyToListingUseCase's existence check and the transaction's insert, the FK violation surfaces as a raw unhandled 500 instead of a clean 404/409.
+  evidence: Edge-case + blind-hunter review — currently unreachable (no account- or listing-deletion feature exists anywhere yet); revisit once Story 5.4 (account deletion) or a listing-deletion path lands.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-3-catch-interaction-direct-application.md`
+  summary: applications table only has a composite UNIQUE(job_seeker_id, listing_id) index (leading column job_seeker_id); Epic 3's employer-side triage view (Story 3.4) will need to query by listing_id alone, which this index serves poorly.
+  evidence: Blind-hunter review — add a secondary index on listing_id when Story 3.4 builds that query.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-3-catch-interaction-direct-application.md`
+  summary: MapView's catch/apply error state shows the same generic "réessayez" (retry) message for every failure, including a 404 (listing no longer exists) where retrying can never succeed.
+  evidence: Blind-hunter review — minor UX polish, not incorrect or crash-prone, just not maximally helpful.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-3-catch-interaction-direct-application.md`
+  summary: apps/backend/tsconfig.json excludes **/*.spec.ts from type-checking entirely, so a test file whose mocks fall out of sync with an interface (as happened here with ListingRepositoryPort.findById) compiles and runs "green" with a real type error hiding inside it.
+  evidence: Verification-gap review — confirmed via a direct `tsc --noEmit --strict --ignoreConfig` run against the affected spec file, which surfaced two real TS2741 errors invisible to both `tsc --noEmit` (project config) and vitest (esbuild transpile-only, no type-checking).

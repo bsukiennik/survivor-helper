@@ -13,7 +13,18 @@ export class DrizzleListingRepository implements ListingRepositoryPort {
       .from(listingsTable)
       .where(eq(listingsTable.status, 'published'));
 
-    return rows.map((row) => ({
+    return rows.map((row) => this.toDomain(row));
+  }
+
+  async findById(id: string): Promise<Listing | null> {
+    const rows = await getDb().select().from(listingsTable).where(eq(listingsTable.id, id)).limit(1);
+
+    const row = rows[0];
+    return row ? this.toDomain(row) : null;
+  }
+
+  private toDomain(row: typeof listingsTable.$inferSelect): Listing {
+    return {
       id: row.id,
       title: row.title,
       employerName: row.employerName,
@@ -22,6 +33,6 @@ export class DrizzleListingRepository implements ListingRepositoryPort {
       latitude: row.latitude,
       longitude: row.longitude,
       status: row.status,
-    }));
+    };
   }
 }

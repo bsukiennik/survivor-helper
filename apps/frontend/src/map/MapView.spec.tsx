@@ -282,6 +282,140 @@ describe('MapView', () => {
     expect(readStoredAuth()).toBeNull();
   });
 
+  const LISTING = {
+    id: 'listing-1',
+    title: 'Boulanger / Boulangère',
+    employerName: 'Boulangerie du Marché',
+    location: 'Paris',
+    description: 'Poste à temps plein.',
+    latitude: 48.8566,
+    longitude: 2.3522,
+    status: 'published',
+  };
+
+  function stubAuthenticatedFetch(
+    applyResponse: () => { ok: boolean; status?: number; json: () => Promise<unknown> },
+  ): ReturnType<typeof vi.fn> {
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === 'http://localhost:3000/listings') {
+        return { ok: true, json: async () => [LISTING] };
+      }
+      if (url === 'http://localhost:3000/me/applications' && init?.method === 'POST') {
+        return applyResponse();
+      }
+      throw new Error(`Unexpected fetch call: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  async function renderWithLoggedInAccountAndOpenPopup(
+    fetchMock: ReturnType<typeof vi.fn>,
+  ): Promise<HTMLElement> {
+    stubWorkingLocalStorage();
+    localStorage.setItem(
+      'geoemploi.auth',
+      JSON.stringify({ accessToken: 'token-abc', email: 'a@b.com' }),
+    );
+
+    const { container } = renderMapView();
+
+    await waitFor(() => {
+      expect(container.querySelector('.leaflet-marker-icon')).toBeTruthy();
+    });
+    fireEvent.click(container.querySelector('.leaflet-marker-icon')!);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Catch/i })).toBeTruthy();
+    });
+    expect(fetchMock).toHaveBeenCalledWith('http://localhost:3000/listings');
+    return container;
+  }
+
+  it('shows working Postuler and Catch buttons (not the disabled stub) when logged in', async () => {
+    const fetchMock = stubAuthenticatedFetch(() => ({
+      ok: true,
+      status: 201,
+      json: async () => ({ id: 'app-1', listingId: 'listing-1', alreadyApplied: false }),
+    }));
+
+    await renderWithLoggedInAccountAndOpenPopup(fetchMock);
+
+    const applyButton = screen.getByRole('button', { name: 'Postuler' });
+    const catchButton = screen.getByRole('button', { name: /Catch/i });
+    expect(applyButton.hasAttribute('disabled')).toBe(false);
+    expect(catchButton.hasAttribute('disabled')).toBe(false);
+  });
+
+  it('Catch calls POST /me/applications with the bearer token and shows a success state on 201', async () => {
+    const fetchMock = stubAuthenticatedFetch(() => ({
+      ok: true,
+      status: 201,
+      json: async () => ({ id: 'app-1', listingId: 'listing-1', alreadyApplied: false }),
+    }));
+
+    await renderWithLoggedInAccountAndOpenPopup(fetchMock);
+    fireEvent.click(screen.getByRole('button', { name: /Catch/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Candidature envoyée !')).toBeTruthy();
+    });
+
+    const applyCall = fetchMock.mock.calls.find(
+      (call: unknown[]) => call[0] === 'http://localhost:3000/me/applications',
+    ) as [string, RequestInit];
+    const init = applyCall[1];
+    expect(init.method).toBe('POST');
+    expect(new Headers(init.headers).get('authorization')).toBe('Bearer token-abc');
+    expect(JSON.parse(init.body as string)).toEqual({ listingId: 'listing-1' });
+    // Success is terminal — no error text, no more Catch/Postuler buttons.
+    expect(screen.queryByRole('button', { name: 'Postuler' })).toBeNull();
+  });
+
+  it('plain Postuler hits the same endpoint as Catch', async () => {
+    const fetchMock = stubAuthenticatedFetch(() => ({
+      ok: true,
+      status: 201,
+      json: async () => ({ id: 'app-1', listingId: 'listing-1', alreadyApplied: false }),
+    }));
+
+    await renderWithLoggedInAccountAndOpenPopup(fetchMock);
+    fireEvent.click(screen.getByRole('button', { name: 'Postuler' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Candidature envoyée !')).toBeTruthy();
+    });
+  });
+
+  it('shows "already caught" (not an error) when the backend reports alreadyApplied: true', async () => {
+    const fetchMock = stubAuthenticatedFetch(() => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ id: null, listingId: 'listing-1', alreadyApplied: true }),
+    }));
+
+    await renderWithLoggedInAccountAndOpenPopup(fetchMock);
+    fireEvent.click(screen.getByRole('button', { name: /Catch/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Déjà postulé à cette offre')).toBeTruthy();
+    });
+    expect(screen.queryByText(/Échec/i)).toBeNull();
+  });
+
+  it('shows a retryable error state (not a crash) when the apply request fails', async () => {
+    const fetchMock = stubAuthenticatedFetch(() => ({ ok: false, status: 500, json: async () => ({}) }));
+
+    await renderWithLoggedInAccountAndOpenPopup(fetchMock);
+    fireEvent.click(screen.getByRole('button', { name: /Catch/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Échec de la candidature/i)).toBeTruthy();
+    });
+    // Buttons remain so the Job Seeker can retry.
+    expect(screen.getByRole('button', { name: 'Postuler' })).toBeTruthy();
+  });
+
   it('shows a "Mon profil" link to /profile only when an account is logged in', () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] })));
 

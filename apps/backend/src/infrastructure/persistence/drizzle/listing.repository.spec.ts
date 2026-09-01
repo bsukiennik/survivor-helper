@@ -82,4 +82,21 @@ describe('DrizzleListingRepository (integration, real Postgres)', () => {
     const publishedResult = results.find((listing) => listing.id === TEST_PUBLISHED_ID);
     expect(publishedResult?.location).toBe('Testville');
   });
+
+  it('findById finds a Listing regardless of status (Story 2.3 pre-transaction existence check)', async () => {
+    const repository = new DrizzleListingRepository();
+
+    const found = await repository.findById(TEST_ARCHIVED_ID);
+
+    expect(found?.id).toBe(TEST_ARCHIVED_ID);
+    expect(found?.status).toBe('archived');
+  });
+
+  it('findById returns null for an id that matches no row', async () => {
+    const repository = new DrizzleListingRepository();
+
+    const found = await repository.findById('99999999-9999-4999-8999-000000000000');
+
+    expect(found).toBeNull();
+  });
 });

@@ -22,6 +22,7 @@ describe('GetPublishedListingsUseCase', () => {
     const published = [makeListing()];
     const repository: ListingRepositoryPort = {
       findPublished: async () => published,
+      findById: async () => null,
     };
 
     const useCase = new GetPublishedListingsUseCase(repository);
@@ -33,6 +34,7 @@ describe('GetPublishedListingsUseCase', () => {
   it('returns an empty array when there are no published listings', async () => {
     const repository: ListingRepositoryPort = {
       findPublished: async () => [],
+      findById: async () => null,
     };
 
     const useCase = new GetPublishedListingsUseCase(repository);
