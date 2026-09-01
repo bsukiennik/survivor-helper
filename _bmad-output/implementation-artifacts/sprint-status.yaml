@@ -1,0 +1,88 @@
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+generated: 09-01-2026 14:11
+last_updated: 09-01-2026 15:40
+project: GEOEMPLOI
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+development_status:
+  epic-1: in-progress
+  1-1-anonymous-map-browsing: review
+  1-2-view-listing-details-without-an-account: backlog
+  1-3-consent-gate-before-device-geolocation: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-job-seeker-account-creation: backlog
+  2-2-professional-profile-management: backlog
+  2-3-catch-interaction-direct-application: backlog
+  2-4-catch-count-badges-permis-de-travail-unlock: backlog
+  2-5-application-tracking: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-employer-account-creation-with-verification: backlog
+  3-2-publish-a-geolocated-listing: backlog
+  3-3-new-application-notification: backlog
+  3-4-application-triage: backlog
+  3-5-listing-performance-stats-subscription-dashboard: backlog
+  3-6-subscription-lapse-handling: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-live-listing-appearance-via-websocket: backlog
+  4-2-polling-fallback-websocket-kill-switch: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-report-a-listing: backlog
+  5-2-moderation-queue-action: backlog
+  5-3-account-activation-suspension: backlog
+  5-4-account-deletion-data-retention: backlog
+  5-5-national-metrics-dashboard: backlog
+  epic-5-retrospective: optional
+
+  epic-6: backlog
+  6-1-single-displayed-product-name: backlog
+  6-2-design-token-system-for-the-graphic-charter: backlog
+  6-3-per-screen-charter-compliance-checklist: backlog
+  epic-6-retrospective: optional
+
+  epic-7: backlog
+  7-1-realistic-seed-dataset: backlog
+  7-2-health-check-endpoint: backlog
+  7-3-openapi-documentation-generated-from-code: backlog
+  7-4-database-schema-export-sync: backlog
+  7-5-map-tile-cache-observability: backlog
+  7-6-load-test-execution-report: backlog
+  7-7-local-install-verification-deployment-note: backlog
+  epic-7-retrospective: optional
