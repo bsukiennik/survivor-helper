@@ -1,45 +1,41 @@
-import React, { useState } from 'react';
-import { apiService } from '../services/api';
+import { useState, FormEvent } from 'react';
+import { registerJobSeeker } from '../services/api';
 
-export const RegisterJobSeeker: React.FC = () => {
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    password: '',
-    skills: '',
-    experience: '',
-    availability: 'Immédiate'
-  });
+export function RegisterJobSeeker() {
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [skills, setSkills] = useState('');
+  const [experience, setExperience] = useState('');
+  const [availability, setAvailability] = useState('Immédiate');
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  const fillExampleData = () => {
-    setFormData({
-      fullName: 'Jean Dupont',
-      email: 'jean.dupont@email.fr',
-      password: 'Password123!',
-      skills: 'React, TypeScript, UI Design',
-      experience: '3 ans en développement web',
-      availability: 'Immédiate'
-    });
+  const fillExample = () => {
+    setFullName('Jean Dupont');
+    setEmail('jean.dupont@email.fr');
+    setPassword('Password123!');
+    setSkills('React, TypeScript');
+    setExperience('3 ans en développement web');
+    setAvailability('Immédiate');
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
+    setError('');
+    setSuccess('');
 
-    if (formData.password.length < 8) {
-      setError("Le mot de passe doit contenir au moins 8 caractères.");
+    if (password.length < 8) {
+      setError('Le mot de passe doit contenir au moins 8 caractères.');
       return;
     }
 
     setLoading(true);
     try {
-      const res = await apiService.registerJobSeeker(formData);
-      setSuccess(`Compte créé avec succès pour ${res.user.fullName} !`);
+      await registerJobSeeker({ fullName, email, password, skills, experience, availability });
+      setSuccess(`Compte créé avec succès pour ${fullName} !`);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -51,20 +47,7 @@ export const RegisterJobSeeker: React.FC = () => {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
         <h2>Inscription Demandeur d'emploi</h2>
-        <button
-          type="button"
-          onClick={fillExampleData}
-          style={{
-            background: '#F3F4F6',
-            border: '1px solid #D1D5DB',
-            borderRadius: '4px',
-            padding: '0.3rem 0.6rem',
-            fontSize: '0.75rem',
-            cursor: 'pointer',
-            fontWeight: 600,
-            color: '#4B5563'
-          }}
-        >
+        <button type="button" onClick={fillExample} className="btn-secondary">
           ✨ Remplir exemple
         </button>
       </div>
@@ -72,18 +55,8 @@ export const RegisterJobSeeker: React.FC = () => {
         Créez votre profil professionnel réutilisable sur GéoEmploi.
       </p>
 
-      {error && (
-        <div className="alert-banner error">
-          <span>⚠️</span>
-          <span>{error}</span>
-        </div>
-      )}
-      {success && (
-        <div className="alert-banner success">
-          <span>✅</span>
-          <span>{success}</span>
-        </div>
-      )}
+      {error && <div className="alert-banner error">⚠️ {error}</div>}
+      {success && <div className="alert-banner success">✅ {success}</div>}
 
       <form onSubmit={handleSubmit}>
         <div className="form-group">
@@ -92,8 +65,8 @@ export const RegisterJobSeeker: React.FC = () => {
             className="form-control"
             type="text"
             placeholder="ex: Jean Dupont"
-            value={formData.fullName}
-            onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
             required
           />
         </div>
@@ -104,8 +77,8 @@ export const RegisterJobSeeker: React.FC = () => {
             className="form-control"
             type="email"
             placeholder="ex: jean.dupont@email.fr"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
           />
         </div>
@@ -116,8 +89,8 @@ export const RegisterJobSeeker: React.FC = () => {
             className="form-control"
             type="password"
             placeholder="••••••••"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             required
           />
         </div>
@@ -128,8 +101,8 @@ export const RegisterJobSeeker: React.FC = () => {
             className="form-control"
             type="text"
             placeholder="ex: React, TypeScript, Communication"
-            value={formData.skills}
-            onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
+            value={skills}
+            onChange={(e) => setSkills(e.target.value)}
             required
           />
         </div>
@@ -140,8 +113,8 @@ export const RegisterJobSeeker: React.FC = () => {
             className="form-control"
             rows={2}
             placeholder="ex: 3 ans en développement web"
-            value={formData.experience}
-            onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+            value={experience}
+            onChange={(e) => setExperience(e.target.value)}
             required
           />
         </div>
@@ -150,8 +123,8 @@ export const RegisterJobSeeker: React.FC = () => {
           <label>Disponibilité *</label>
           <select
             className="form-control"
-            value={formData.availability}
-            onChange={(e) => setFormData({ ...formData, availability: e.target.value })}
+            value={availability}
+            onChange={(e) => setAvailability(e.target.value)}
           >
             <option value="Immédiate">Immédiate</option>
             <option value="Sous 1 mois">Sous 1 mois</option>
@@ -165,4 +138,4 @@ export const RegisterJobSeeker: React.FC = () => {
       </form>
     </div>
   );
-};
+}

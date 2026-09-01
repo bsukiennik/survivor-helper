@@ -1,38 +1,34 @@
 import { useState, FormEvent } from 'react';
-import { apiService } from '../services/api';
+import { registerEmployer } from '../services/api';
 
 export function RegisterEmployer() {
-  const [formData, setFormData] = useState({
-    companyName: '',
-    siret: '',
-    contactName: '',
-    email: '',
-    password: ''
-  });
+  const [companyName, setCompanyName] = useState('');
+  const [siret, setSiret] = useState('');
+  const [contactName, setContactName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  const fillExampleData = () => {
-    setFormData({
-      companyName: 'Tech Paris SAS',
-      siret: '12345678901234',
-      contactName: 'Alice Martin',
-      email: 'recrutement@tech-paris.fr',
-      password: 'EmployerPass123!'
-    });
+  const fillExample = () => {
+    setCompanyName('Tech Paris SAS');
+    setSiret('12345678901234');
+    setContactName('Alice Martin');
+    setEmail('recrutement@tech-paris.fr');
+    setPassword('EmployerPass123!');
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
+    setError('');
+    setSuccess('');
 
     setLoading(true);
     try {
-      const res = await apiService.registerEmployer(formData);
-      setSuccess(`Compte Employeur créé pour ${res.user.companyName} ! Statut : ${res.user.verificationStatus}`);
+      await registerEmployer({ companyName, siret, contactName, email, password });
+      setSuccess(`Compte Employeur créé pour ${companyName} ! Statut : En attente de vérification`);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -44,20 +40,7 @@ export function RegisterEmployer() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
         <h2>Inscription Employeur</h2>
-        <button
-          type="button"
-          onClick={fillExampleData}
-          style={{
-            background: '#F3F4F6',
-            border: '1px solid #D1D5DB',
-            borderRadius: '4px',
-            padding: '0.3rem 0.6rem',
-            fontSize: '0.75rem',
-            cursor: 'pointer',
-            fontWeight: 600,
-            color: '#4B5563'
-          }}
-        >
+        <button type="button" onClick={fillExample} className="btn-secondary">
           ✨ Remplir exemple
         </button>
       </div>
@@ -66,7 +49,7 @@ export function RegisterEmployer() {
       </p>
 
       <div className="alert-banner info">
-        <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>ℹ️</span>
+        <span>ℹ️</span>
         <div>
           <strong>Vérification d'activité</strong>
           <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem', color: '#0369A1', lineHeight: '1.4' }}>
@@ -75,18 +58,8 @@ export function RegisterEmployer() {
         </div>
       </div>
 
-      {error && (
-        <div className="alert-banner error">
-          <span>⚠️</span>
-          <span>{error}</span>
-        </div>
-      )}
-      {success && (
-        <div className="alert-banner success">
-          <span>✅</span>
-          <span>{success}</span>
-        </div>
-      )}
+      {error && <div className="alert-banner error">⚠️ {error}</div>}
+      {success && <div className="alert-banner success">✅ {success}</div>}
 
       <form onSubmit={handleSubmit}>
         <div className="form-group">
@@ -95,8 +68,8 @@ export function RegisterEmployer() {
             className="form-control"
             type="text"
             placeholder="ex: Tech Paris SAS"
-            value={formData.companyName}
-            onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
             required
           />
         </div>
@@ -108,8 +81,8 @@ export function RegisterEmployer() {
             type="text"
             maxLength={14}
             placeholder="12345678901234"
-            value={formData.siret}
-            onChange={(e) => setFormData({ ...formData, siret: e.target.value })}
+            value={siret}
+            onChange={(e) => setSiret(e.target.value)}
             required
           />
         </div>
@@ -120,8 +93,8 @@ export function RegisterEmployer() {
             className="form-control"
             type="text"
             placeholder="ex: Alice Martin"
-            value={formData.contactName}
-            onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
+            value={contactName}
+            onChange={(e) => setContactName(e.target.value)}
             required
           />
         </div>
@@ -132,8 +105,8 @@ export function RegisterEmployer() {
             className="form-control"
             type="email"
             placeholder="ex: recrutement@tech-paris.fr"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
           />
         </div>
@@ -144,8 +117,8 @@ export function RegisterEmployer() {
             className="form-control"
             type="password"
             placeholder="••••••••"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             required
           />
         </div>
