@@ -1,6 +1,6 @@
 :root {
-  --color-brand-blue: #1B3A6B;
-  --color-action-blue: #000091;
+  --color-brand-blue: #1B3A6B;      /* Header & branding text */
+  --color-action-blue: #000091;     /* DSFR Action Blue for buttons */
   --color-action-hover: #1212ff;
   --color-bg-light: #F6F6F6;
   --font-title: 'Marianne', system-ui, sans-serif;
@@ -88,6 +88,13 @@ h1, h2, h3, h4 {
   font-family: var(--font-body);
   font-size: 0.95rem;
   box-sizing: border-box;
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 80px;
+  max-height: 250px;
+  max-width: 100%;
 }
 
 .form-control:focus {
