@@ -2,9 +2,10 @@ import { Logger } from '@nestjs/common';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as accountSchema from './account.schema.js';
+import * as jobSeekerProfileSchema from './job-seeker-profile.schema.js';
 import * as listingSchema from './listing.schema.js';
 
-const schema = { ...listingSchema, ...accountSchema };
+const schema = { ...listingSchema, ...accountSchema, ...jobSeekerProfileSchema };
 
 const logger = new Logger('DrizzlePool');
 

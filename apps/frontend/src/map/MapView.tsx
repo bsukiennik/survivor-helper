@@ -185,6 +185,9 @@ export function MapView(): React.JSX.Element {
         <h1 className="text-lg font-semibold text-slate-900">GéoEmploi</h1>
         {auth ? (
           <div className="flex items-center gap-3 text-sm text-slate-700">
+            <Link to="/profile" className="font-medium text-amber-700 underline">
+              Mon profil
+            </Link>
             <span>{auth.email}</span>
             <button type="button" onClick={handleLogout} className="text-slate-600 underline">
               Se déconnecter

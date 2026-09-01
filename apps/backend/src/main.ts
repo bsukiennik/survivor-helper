@@ -32,6 +32,9 @@ async function bootstrap(): Promise<void> {
     .setTitle('GéoEmploi API')
     .setDescription('Public + role-gated REST API for GéoEmploi')
     .setVersion('0.1.0')
+    // Matches @ApiBearerAuth() on guarded controllers (e.g. ProfileController)
+    // — without this, Swagger UI has no "Authorize" bearer-token input.
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api-docs', app, document);

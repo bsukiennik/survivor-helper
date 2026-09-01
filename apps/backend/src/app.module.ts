@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from './interfaces/auth/auth.module.js';
 import { ListingsModule } from './interfaces/listings/listings.module.js';
+import { ProfileModule } from './interfaces/profile/profile.module.js';
 import { TilesModule } from './interfaces/tiles/tiles.module.js';
 
 // No ConfigModule/ConfigService here on purpose: the standalone Drizzle
@@ -10,6 +11,6 @@ import { TilesModule } from './interfaces/tiles/tiles.module.js';
 // coexisting env-access patterns. Every consumer — in-app or standalone —
 // reads `process.env` directly and consistently instead.
 @Module({
-  imports: [ListingsModule, TilesModule, AuthModule],
+  imports: [ListingsModule, TilesModule, AuthModule, ProfileModule],
 })
 export class AppModule {}

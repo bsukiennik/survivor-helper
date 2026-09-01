@@ -101,3 +101,19 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-1-job-seeker-account-creation.md`
   summary: RolesGuard (AD-15) is opt-in per route (@UseGuards + @Roles), not registered globally — a future author must remember to add both on a new sensitive route, with no "deny unless explicitly public" default.
   evidence: Blind-hunter review — this matches the architecture spine's stated design (AD-15 describes per-route gating, not a global guard), so changing it would be an architectural decision, not a patch; revisit if Epic 3/5's protected routes reveal this is error-prone in practice.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-2-professional-profile-management.md`
+  summary: job_seeker_profiles.accountId has no onDelete behavior on its FK to accounts.id — deleting an account with a profile will hit a raw FK violation instead of being handled gracefully.
+  evidence: Blind-hunter + edge-case review — the real fix belongs with Story 5.4's account-deletion use case (AD-7), which should anonymize/clean up related rows deliberately, not this story guessing at cascade behavior.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-2-professional-profile-management.md`
+  summary: No live test proves JwtAuthGuard + RolesGuard actually compose correctly when stacked on one route.
+  evidence: Blind-hunter review — no route in the codebase stacks both guards yet (Story 2.2 uses JwtAuthGuard only, by design); revisit once Epic 3/5 adds the first route that needs both.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-2-professional-profile-management.md`
+  summary: No optimistic-concurrency handling on profile save — two concurrent PUTs (e.g. two open tabs) silently last-write-wins with no staleness warning.
+  evidence: Blind-hunter review — low priority for a simple profile form.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-2-professional-profile-management.md`
+  summary: ProfilePage doesn't sync across browser tabs — if auth is cleared in one tab, another open tab keeps using the stale token until its next action fails.
+  evidence: Edge-case review — niche, no `storage` event listener wired up.

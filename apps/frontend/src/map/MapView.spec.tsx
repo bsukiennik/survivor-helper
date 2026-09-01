@@ -281,4 +281,22 @@ describe('MapView', () => {
     expect(screen.getByRole('link', { name: 'Se connecter' })).toBeTruthy();
     expect(readStoredAuth()).toBeNull();
   });
+
+  it('shows a "Mon profil" link to /profile only when an account is logged in', () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] })));
+
+    renderMapView();
+    expect(screen.queryByRole('link', { name: 'Mon profil' })).toBeNull();
+
+    cleanup();
+    stubWorkingLocalStorage();
+    localStorage.setItem(
+      'geoemploi.auth',
+      JSON.stringify({ accessToken: 'token-abc', email: 'a@b.com' }),
+    );
+
+    renderMapView();
+    const link = screen.getByRole('link', { name: 'Mon profil' });
+    expect(link.getAttribute('href')).toBe('/profile');
+  });
 });

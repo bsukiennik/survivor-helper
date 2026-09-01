@@ -52,3 +52,19 @@ export function clearAuth(): void {
     // Not available — nothing to clear.
   }
 }
+
+/**
+ * `fetch` wrapper that attaches the stored bearer token (Story 2.2) — used
+ * by any request that hits a `JwtAuthGuard`-gated route (e.g. `/me/profile`).
+ * With no stored auth, this is a plain unauthenticated `fetch`; the caller
+ * is expected to have already redirected to /login in that case rather than
+ * relying on this to reject.
+ */
+export function authFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const auth = readStoredAuth();
+  const headers = new Headers(init.headers);
+  if (auth) {
+    headers.set('authorization', `Bearer ${auth.accessToken}`);
+  }
+  return fetch(url, { ...init, headers });
+}
