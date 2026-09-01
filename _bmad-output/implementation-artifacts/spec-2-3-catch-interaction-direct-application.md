@@ -24,7 +24,7 @@ baseline_commit: '976fb9e42bb0e08a5902a025b08999518cefb5aa'
 - `applications` table: `id` (uuid PK, default random), `jobSeekerId` (uuid, FK → `accounts.id`), `listingId` (uuid, FK → `listings.id`), `status` (text, `notNull().default('submitted')` — Epic 3's triage use case is the only future writer of this column; this story never reads or transitions it), `createdAt` (timestamp w/ tz, default now). `UNIQUE(job_seeker_id, listing_id)`.
 - `ApplyToListing` use case runs in one `db.transaction()`: `SELECT ... FOR UPDATE` on the caller's `accounts` row first (serializes concurrent catches by that Job Seeker — the lock Story 2.4 will reuse), then `insert(applications).values(...).onConflictDoNothing({ target: [applications.jobSeekerId, applications.listingId] }).returning()`. Return value distinguishes "created" vs "already existed" so the controller/frontend can tell catch from re-catch.
 - Log via `new Logger(ApplyToListingUseCase.name)` — one line with jobSeekerId, listingId, timestamp — only when a row is actually created, never on the no-op path (AD-6).
-- `POST /me/applications` (body `{ listingId: string }`, `@IsUUID()`), guarded by `@UseGuards(JwtAuthGuard, RolesGuard) @Roles('JobSeeker')` — first live route to stack both guards. Non-existent `listingId` → 404 before the transaction opens (look up the Listing first).
+- `POST /me/applications` (body `{ listingId: string }`, `@IsUUID()`), guarded by `@UseGuards(JwtAuthGuard, RolesGuard) @Roles('JobSeeker')` — first live route to stack both guards. Non-existent OR non-`published` `listingId` → 404 before the transaction opens (look up the Listing first; the map only ever shows `published` Listings, so this matches the only visibility path that exists).
 - Frontend: popup keeps a plain "Postuler" affordance and adds a visually distinct "Catch" affordance (e.g. accent styling/icon) — both call the same `authFetch(POST /me/applications)`; a re-click on an already-caught Listing shows "already caught" state, not an error.
 - Employer's later view of an Application (Epic 3) joins live to `job_seeker_profiles` by `jobSeekerId` — "profile transmitted" is whatever is currently saved, not a snapshot frozen at apply time.
 
@@ -43,6 +43,7 @@ baseline_commit: '976fb9e42bb0e08a5902a025b08999518cefb5aa'
 | First catch | `POST /me/applications {listingId}`, authenticated JobSeeker, Listing exists, no prior Application for this pair | 201, Application created, one log line emitted | N/A |
 | Repeat catch | Same request again for the same pair | 200, no new row, no log line, `alreadyApplied: true` in response | N/A — silent no-op, not an error |
 | Unknown listing | `listingId` not in `listings` | Request rejected before any transaction/lock | 404 |
+| Non-published listing | `listingId` exists but `status` ≠ `published` (archived/lapsed/removed) | Request rejected before any transaction/lock, same as unknown | 404 |
 | No/invalid token | Missing or malformed bearer token | Rejected | 401 |
 | Wrong role | Valid token, `role` ≠ `JobSeeker` | Rejected | 403 |
 | Concurrent catches, different listings, same Job Seeker | Two simultaneous `POST`s | Both succeed; serialized by the account row lock, no lost update | N/A |
@@ -81,6 +82,13 @@ baseline_commit: '976fb9e42bb0e08a5902a025b08999518cefb5aa'
 - Given a Listing they already caught, when they Catch again, then no duplicate Application is created and no error is shown
 - Given an Employer or Administrator token, when they call `POST /me/applications`, then the request is rejected with 403
 - Given two catches on different Listings by the same Job Seeker arrive concurrently, when both are processed, then both succeed and the account-row lock serializes them (no lost update)
+
+## Spec Change Log
+
+- **Trigger:** blind-hunter review flagged that the pre-transaction existence check (`findById`) accepted a Listing regardless of `status`, so a crafted request could catch an archived/lapsed/removed Listing — not reachable via the actual map UI (which only ever shows `published` Listings), and not violating any stated Acceptance Criterion, but two genuinely defensible readings existed (strict published-only vs. permissive any-existing-listing), so it was surfaced to the human rather than silently patched.
+- **Amended:** the `Always` bullet on `POST /me/applications` (Boundaries & Constraints) and the I/O & Edge-Case Matrix now specify non-`published` as a 404, same as non-existent. Code: `apply-to-listing.use-case.ts`'s existence check now also rejects `listing.status !== 'published'`; `listing-repository.port.ts`'s `findById` doc-comment corrected to no longer claim "any status" is the deliberate design (that was the implementer's own unauthorized rationale for the very gap this entry closes).
+- **Known-bad state avoided:** a scripted/malicious client could otherwise apply to a Listing that was never visible through any legitimate path in the product.
+- **KEEP:** `findById` itself stays status-agnostic at the repository/port layer (reusable for future admin/employer tooling) — only the use case enforces the published-only business rule. Do not push the status filter down into the repository.
 
 ## Design Notes
 

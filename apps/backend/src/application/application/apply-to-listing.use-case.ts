@@ -36,10 +36,13 @@ export class ApplyToListingUseCase {
   ) {}
 
   async execute(input: ApplyToListingInput): Promise<Application | null> {
-    // Unknown listingId is rejected before any transaction/lock opens
-    // (I/O matrix) — the controller maps this error to 404.
+    // Unknown or non-published listingId is rejected before any
+    // transaction/lock opens (I/O matrix) — the controller maps this error
+    // to 404. Published-only matches the only visibility path that exists
+    // today (the map only ever shows `findPublished()` results), and avoids
+    // leaking the existence of a non-public Listing to a crafted request.
     const listing = await this.listingRepository.findById(input.listingId);
-    if (!listing) {
+    if (!listing || listing.status !== 'published') {
       throw new ListingNotFoundError(input.listingId);
     }
 

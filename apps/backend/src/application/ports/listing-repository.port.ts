@@ -6,9 +6,11 @@ import type { Listing } from '../../domain/listing/listing.entity.js';
  */
 export interface ListingRepositoryPort {
   findPublished(): Promise<Listing[]>;
-  // Story 2.3 — existence lookup for `ApplyToListingUseCase`'s pre-transaction
-  // 404 check (any status, not just `published`; a Listing that lapsed after
-  // being caught is still a real Listing).
+  // Story 2.3 — generic existence lookup (any status), kept status-agnostic
+  // at this layer so it stays reusable (e.g. future admin/employer tooling
+  // that needs to look up a non-published Listing). `ApplyToListingUseCase`
+  // is the one that enforces the "must be published to be catchable"
+  // business rule on top of this — see its own comment.
   findById(id: string): Promise<Listing | null>;
 }
 

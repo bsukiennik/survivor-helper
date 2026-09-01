@@ -91,4 +91,18 @@ describe('ApplyToListingUseCase', () => {
     ).rejects.toThrow(ListingNotFoundError);
     expect(applyToListing).not.toHaveBeenCalled();
   });
+
+  it('throws ListingNotFoundError and never opens the transaction when the listing exists but is not published', async () => {
+    const applyToListing = vi.fn(async () => APPLICATION);
+    const archivedListing: Listing = { ...LISTING, status: 'archived' };
+    const useCase = new ApplyToListingUseCase(
+      makeListingRepository({ findById: async () => archivedListing }),
+      makeApplicationRepository({ applyToListing }),
+    );
+
+    await expect(
+      useCase.execute({ jobSeekerId: 'account-1', listingId: 'listing-1' }),
+    ).rejects.toThrow(ListingNotFoundError);
+    expect(applyToListing).not.toHaveBeenCalled();
+  });
 });
