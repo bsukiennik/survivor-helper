@@ -6,5 +6,6 @@ import {
 
 export default [
     index("routes/home.tsx"),
+    route("/map", "routes/map.tsx")
     // route("/example", "routes/example.tsx")
 ] satisfies RouteConfig;
