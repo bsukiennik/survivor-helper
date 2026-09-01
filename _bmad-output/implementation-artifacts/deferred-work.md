@@ -57,3 +57,19 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-2-view-listing-details-without-an-account.md`
   summary: listings.location has no DB index, even though it's a natural future search/filter dimension.
   evidence: Blind-hunter review — not required for this story's read-only scope.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-3-consent-gate-before-device-geolocation.md`
+  summary: Consent choice is stored with no expiry/versioning — if the notice's wording/purpose ever changes, previously recorded choices are silently honored forever with no re-prompt.
+  evidence: Blind-hunter review — relevant once the notice text is finalized/legally reviewed.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-3-consent-gate-before-device-geolocation.md`
+  summary: No UI lets a visitor later change a recorded consent choice (e.g. a privacy/settings control) — only clearing browser storage manually works today.
+  evidence: Blind-hunter review — privacy-adjacent, connects to the broader accessibility/non-visual-alternative gap already deferred from Story 1.1.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-3-consent-gate-before-device-geolocation.md`
+  summary: Consent event "logging" is console.info + localStorage only — no backend audit trail with a visitor identifier, since no audit endpoint exists in the architecture yet.
+  evidence: Blind-hunter review — the PRD's "auditable (who/when)" language isn't fully met by a client-only record; revisit if a real audit requirement emerges.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-3-consent-gate-before-device-geolocation.md`
+  summary: No literal "manual location/commune search" UI exists on consent decline — the epics AC names this explicitly, but declining currently just leaves the existing pannable/zoomable France-wide map, which the team judged to satisfy "browsing still works" without a dedicated search box.
+  evidence: User decision during Story 1.3 review — build the real commune search as its own future story rather than folding it into this consent-gate change.

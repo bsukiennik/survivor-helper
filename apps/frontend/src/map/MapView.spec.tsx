@@ -1,5 +1,7 @@
+import L from 'leaflet';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { readStoredConsent } from './geolocation-consent';
 import { MapView } from './MapView';
 
 describe('MapView', () => {
@@ -10,7 +12,38 @@ describe('MapView', () => {
     // into the next test.
     cleanup();
     vi.unstubAllGlobals();
+    try {
+      localStorage.clear();
+    } catch {
+      // Not available in this test environment — nothing to clear.
+    }
   });
+
+  function stubGeolocation(
+    behavior?: (
+      success: PositionCallback,
+      error?: PositionErrorCallback,
+    ) => void,
+  ): { getCurrentPosition: ReturnType<typeof vi.fn> } {
+    const geolocation = {
+      getCurrentPosition: vi.fn(behavior ?? (() => {})),
+    };
+    Object.defineProperty(navigator, 'geolocation', {
+      value: geolocation,
+      configurable: true,
+    });
+    return geolocation;
+  }
+
+  function stubWorkingLocalStorage(): void {
+    const store = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => store.set(key, value),
+      removeItem: (key: string) => store.delete(key),
+      clear: () => store.clear(),
+    });
+  }
 
   it('renders the map without an account/login prompt, even with zero listings', async () => {
     vi.stubGlobal(
@@ -112,6 +145,99 @@ describe('MapView', () => {
       expect(screen.getByRole('status').textContent).toMatch(
         /n'ont pas pu être chargées/,
       );
+    });
+  });
+
+  it('shows the consent banner on first visit and never calls geolocation before a choice is made', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] })));
+    const geolocation = stubGeolocation();
+
+    render(<MapView />);
+
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(geolocation.getCurrentPosition).not.toHaveBeenCalled();
+  });
+
+  it('requests device location and hides the banner when consent is accepted', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] })));
+    const geolocation = stubGeolocation();
+
+    render(<MapView />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Accepter' }));
+
+    expect(geolocation.getCurrentPosition).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('never calls geolocation and hides the banner when consent is declined', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] })));
+    const geolocation = stubGeolocation();
+
+    render(<MapView />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refuser' }));
+
+    expect(geolocation.getCurrentPosition).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('does not re-show the banner on a later visit once a choice was already recorded', async () => {
+    stubWorkingLocalStorage();
+    localStorage.setItem(
+      'geoemploi.locationConsent',
+      JSON.stringify({ choice: 'declined', timestamp: new Date().toISOString() }),
+    );
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] })));
+    const geolocation = stubGeolocation();
+
+    render(<MapView />);
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(geolocation.getCurrentPosition).not.toHaveBeenCalled();
+  });
+
+  it('genuinely persists an accepted choice through the real consent module (not just a UI assertion)', async () => {
+    stubWorkingLocalStorage();
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] })));
+    stubGeolocation();
+
+    render(<MapView />);
+    fireEvent.click(screen.getByRole('button', { name: 'Accepter' }));
+
+    expect(readStoredConsent()?.choice).toBe('accepted');
+  });
+
+  it('recenters the Leaflet map on the device position once geolocation succeeds', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] })));
+    const setViewSpy = vi.spyOn(L.Map.prototype, 'setView');
+    stubGeolocation((success) => {
+      success({
+        coords: { latitude: 45.75, longitude: 4.85 },
+      } as GeolocationPosition);
+    });
+
+    render(<MapView />);
+    fireEvent.click(screen.getByRole('button', { name: 'Accepter' }));
+
+    await waitFor(() => {
+      expect(setViewSpy).toHaveBeenCalledWith([45.75, 4.85], 12);
+    });
+
+    setViewSpy.mockRestore();
+  });
+
+  it('stays on the default view and shows no lingering "locating" status when geolocation fails', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] })));
+    stubGeolocation((_success, error) => {
+      error?.({ code: 1, message: 'User denied Geolocation' } as GeolocationPositionError);
+    });
+
+    render(<MapView />);
+    fireEvent.click(screen.getByRole('button', { name: 'Accepter' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Localisation en cours…')).toBeNull();
     });
   });
 });

@@ -1,10 +1,12 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { useEffect, useState } from 'react';
-import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
+import { useEffect, useRef, useState } from 'react';
+import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+import { ConsentBanner } from './ConsentBanner';
+import { readStoredConsent, recordConsent } from './geolocation-consent';
 
 // Bundlers rewrite Leaflet's default marker image URLs to hashed asset
 // paths, which breaks Leaflet's own path-guessing logic — the standard
@@ -19,10 +21,10 @@ L.Icon.Default.mergeOptions({
 // VITE_API_BASE_URL must also fall back, not resolve to `''`.
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
-// No consent gate / device geolocation yet (Story 1.3) — fixed France-wide
-// default center view.
+// Default view when no device position is available/consented to.
 const FRANCE_CENTER: [number, number] = [46.6034, 1.8883];
 const FRANCE_DEFAULT_ZOOM = 6;
+const USER_LOCATION_ZOOM = 12;
 
 interface ListingDto {
   id: string;
@@ -49,9 +51,97 @@ function hasValidCoordinates(listing: ListingDto): boolean {
   );
 }
 
+// react-leaflet's `center`/`zoom` props only apply on initial mount — this
+// re-centers the already-created Leaflet map instance when consent resolves
+// to a device position after that first render.
+function RecenterMap({ center, zoom }: { center: [number, number]; zoom: number }): null {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, zoom);
+  }, [center, zoom, map]);
+  return null;
+}
+
+// The consent banner sits above MapContainer in normal flex flow, so
+// showing/hiding it resizes the map's container div — without telling
+// Leaflet, the map can render with blank tile regions until the user pans.
+function InvalidateSizeOnLayoutChange({ layoutTrigger }: { layoutTrigger: unknown }): null {
+  const map = useMap();
+  useEffect(() => {
+    map.invalidateSize();
+  }, [layoutTrigger, map]);
+  return null;
+}
+
 export function MapView(): React.JSX.Element {
   const [listings, setListings] = useState<ListingDto[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [showConsentBanner, setShowConsentBanner] = useState(false);
+  const [locatingDevice, setLocatingDevice] = useState(false);
+  const [mapCenter, setMapCenter] = useState<[number, number]>(FRANCE_CENTER);
+  const [mapZoom, setMapZoom] = useState(FRANCE_DEFAULT_ZOOM);
+  const isMountedRef = useRef(true);
+
+  useEffect(
+    () => () => {
+      isMountedRef.current = false;
+    },
+    [],
+  );
+
+  // Attempts to center the map on the visitor's device location. Any
+  // failure (denied, unsupported, timeout) is not an error state — it just
+  // means we stay on the France-wide default, silently.
+  function requestDeviceLocation(): void {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      return;
+    }
+    setLocatingDevice(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        if (!isMountedRef.current) {
+          return;
+        }
+        setMapCenter([position.coords.latitude, position.coords.longitude]);
+        setMapZoom(USER_LOCATION_ZOOM);
+        setLocatingDevice(false);
+      },
+      () => {
+        // Denied at the OS/browser level, or unavailable — default view.
+        if (isMountedRef.current) {
+          setLocatingDevice(false);
+        }
+      },
+      // maximumAge avoids the browser silently returning an old cached fix;
+      // enableHighAccuracy isn't needed for city-level map centering.
+      { timeout: 10_000, maximumAge: 5 * 60 * 1000 },
+    );
+  }
+
+  useEffect(() => {
+    // Consent gate (FR23): no navigator.geolocation call happens before
+    // this resolves. A stored choice from a previous visit is honored
+    // without re-asking; only "no choice yet" shows the banner.
+    const stored = readStoredConsent();
+    if (stored === null) {
+      setShowConsentBanner(true);
+    } else if (stored.choice === 'accepted') {
+      requestDeviceLocation();
+    }
+    // Declined: nothing to do, default view already set.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleAcceptConsent(): void {
+    recordConsent('accepted');
+    setShowConsentBanner(false);
+    requestDeviceLocation();
+  }
+
+  function handleDeclineConsent(): void {
+    recordConsent('declined');
+    setShowConsentBanner(false);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -86,6 +176,14 @@ export function MapView(): React.JSX.Element {
       <header className="border-b border-slate-200 bg-white px-4 py-3">
         <h1 className="text-lg font-semibold text-slate-900">GéoEmploi</h1>
       </header>
+      {showConsentBanner ? (
+        <ConsentBanner onAccept={handleAcceptConsent} onDecline={handleDeclineConsent} />
+      ) : null}
+      {locatingDevice ? (
+        <p role="status" className="bg-blue-50 px-4 py-1 text-sm text-blue-800">
+          Localisation en cours…
+        </p>
+      ) : null}
       {error ? (
         <p role="status" className="bg-amber-50 px-4 py-1 text-sm text-amber-800">
           Certaines annonces n'ont pas pu être chargées. La carte reste utilisable.
@@ -98,6 +196,8 @@ export function MapView(): React.JSX.Element {
           className="h-full w-full"
           scrollWheelZoom
         >
+          <RecenterMap center={mapCenter} zoom={mapZoom} />
+          <InvalidateSizeOnLayoutChange layoutTrigger={showConsentBanner || locatingDevice} />
           <TileLayer
             url={`${API_BASE_URL}/tiles/{z}/{x}/{y}`}
             attribution="&copy; OpenStreetMap contributors"
