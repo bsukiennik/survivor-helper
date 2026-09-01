@@ -45,3 +45,15 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-1-anonymous-map-browsing.md`
   summary: Each Dockerfile copies the other app's package.json purely to satisfy the pnpm workspace install, invalidating the backend image's install-layer cache on unrelated frontend changes (and vice versa).
   evidence: Blind-hunter review — build-time inefficiency, not a correctness issue.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-2-view-listing-details-without-an-account.md`
+  summary: Listing.location has no non-empty/length validation at the DB or DTO level.
+  evidence: Blind-hunter review — no write path exists yet in this story (seed-only data), so no user input can currently violate it; revisit once Epic 3's employer-publish flow adds real input.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-2-view-listing-details-without-an-account.md`
+  summary: No guard exists for a future dedicated Listing detail page/route showing an archived/removed listing — today's AC is only incidentally satisfied via the /listings published-only filter feeding the map Popup.
+  evidence: Blind-hunter review — relevant if/when a shareable detail URL is built later.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-2-view-listing-details-without-an-account.md`
+  summary: listings.location has no DB index, even though it's a natural future search/filter dimension.
+  evidence: Blind-hunter review — not required for this story's read-only scope.

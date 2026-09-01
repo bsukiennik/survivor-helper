@@ -14,6 +14,10 @@ export const listingsTable = pgTable('listings', {
   id: uuid('id').primaryKey().defaultRandom(),
   title: text('title').notNull(),
   employerName: text('employer_name').notNull(),
+  // Free-text city/commune name shown alongside the map marker (FR2) — not
+  // derived from latitude/longitude, so the two can drift; kept in sync by
+  // whichever use case writes a Listing (seed.ts today, Epic 3 later).
+  location: text('location').notNull(),
   description: text('description').notNull(),
   latitude: doublePrecision('latitude').notNull(),
   longitude: doublePrecision('longitude').notNull(),

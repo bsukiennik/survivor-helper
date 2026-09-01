@@ -13,6 +13,7 @@ export interface Listing {
   readonly id: string;
   readonly title: string;
   readonly employerName: string;
+  readonly location: string;
   readonly description: string;
   readonly latitude: number;
   readonly longitude: number;

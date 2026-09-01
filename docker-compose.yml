@@ -36,6 +36,10 @@ services:
     volumes:
       - ./apps/backend:/workspace/apps/backend
       - /workspace/apps/backend/node_modules
+      # Same reasoning as node_modules: without its own volume, tsc's
+      # container-root-owned build output ends up bind-mounted onto the
+      # host, blocking any later `pnpm build` run outside Docker.
+      - /workspace/apps/backend/dist
 
   frontend:
     build:

@@ -32,6 +32,7 @@ describe('DrizzleListingRepository (integration, real Postgres)', () => {
           id: TEST_PUBLISHED_ID,
           title: '__test__ published listing',
           employerName: 'Test Co',
+          location: 'Testville',
           description: 'seeded by listing.repository.spec.ts',
           latitude: 0,
           longitude: 0,
@@ -41,6 +42,7 @@ describe('DrizzleListingRepository (integration, real Postgres)', () => {
           id: TEST_ARCHIVED_ID,
           title: '__test__ archived listing',
           employerName: 'Test Co',
+          location: 'Testville',
           description: 'seeded by listing.repository.spec.ts',
           latitude: 0,
           longitude: 0,
@@ -50,6 +52,7 @@ describe('DrizzleListingRepository (integration, real Postgres)', () => {
           id: TEST_REMOVED_ID,
           title: '__test__ removed listing',
           employerName: 'Test Co',
+          location: 'Testville',
           description: 'seeded by listing.repository.spec.ts',
           latitude: 0,
           longitude: 0,
@@ -75,5 +78,8 @@ describe('DrizzleListingRepository (integration, real Postgres)', () => {
     expect(resultIds).not.toContain(TEST_ARCHIVED_ID);
     expect(resultIds).not.toContain(TEST_REMOVED_ID);
     expect(results.every((listing) => listing.status === 'published')).toBe(true);
+
+    const publishedResult = results.find((listing) => listing.id === TEST_PUBLISHED_ID);
+    expect(publishedResult?.location).toBe('Testville');
   });
 });

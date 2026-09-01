@@ -13,6 +13,7 @@ describe('ListingsController', () => {
       id: '11111111-1111-4111-8111-111111111111',
       title: 'Boulanger',
       employerName: 'Boulangerie du Marché',
+      location: 'Paris',
       description: 'Poste à temps plein.',
       latitude: 48.8566,
       longitude: 2.3522,

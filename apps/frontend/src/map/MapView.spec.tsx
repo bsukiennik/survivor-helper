@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MapView } from './MapView';
 
@@ -30,6 +30,48 @@ describe('MapView', () => {
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith('http://localhost:3000/listings');
     });
+  });
+
+  it('renders a listing marker popup with full detail and a disabled Apply button', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => [
+          {
+            id: 'listing-1',
+            title: 'Boulanger / Boulangère',
+            employerName: 'Boulangerie du Marché',
+            location: 'Paris',
+            description: 'Poste à temps plein.',
+            latitude: 48.8566,
+            longitude: 2.3522,
+            status: 'published',
+          },
+        ],
+      })),
+    );
+
+    const { container } = render(<MapView />);
+
+    await waitFor(() => {
+      expect(container.querySelector('.leaflet-marker-icon')).toBeTruthy();
+    });
+
+    // react-leaflet's Popup only mounts its children once opened — a real
+    // Visitor clicks the marker to see the detail (FR2), so the test does too.
+    fireEvent.click(container.querySelector('.leaflet-marker-icon')!);
+
+    await waitFor(() => {
+      expect(screen.getByText('Boulanger / Boulangère')).toBeTruthy();
+    });
+    expect(screen.getByText('Boulangerie du Marché')).toBeTruthy();
+    expect(screen.getByText('Paris')).toBeTruthy();
+    expect(screen.getByText('Poste à temps plein.')).toBeTruthy();
+
+    const applyButton = screen.getByRole('button', { name: /Postuler/i });
+    expect(applyButton.hasAttribute('disabled')).toBe(true);
+    expect(screen.getByText(/Créez un compte demandeur d'emploi/i)).toBeTruthy();
   });
 
   it('keeps the map usable and shows a status banner when the listings fetch rejects', async () => {

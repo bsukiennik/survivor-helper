@@ -23,6 +23,9 @@ export class ListingDto {
   @ApiProperty({ type: String })
   employerName!: string;
 
+  @ApiProperty({ type: String, example: 'Lyon' })
+  location!: string;
+
   @ApiProperty({ type: String })
   description!: string;
 
@@ -40,6 +43,7 @@ export class ListingDto {
     dto.id = listing.id;
     dto.title = listing.title;
     dto.employerName = listing.employerName;
+    dto.location = listing.location;
     dto.description = listing.description;
     dto.latitude = listing.latitude;
     dto.longitude = listing.longitude;

@@ -28,6 +28,7 @@ interface ListingDto {
   id: string;
   title: string;
   employerName: string;
+  location: string;
   description: string;
   latitude: number;
   longitude: number;
@@ -104,9 +105,36 @@ export function MapView(): React.JSX.Element {
           {listings.filter(hasValidCoordinates).map((listing) => (
             <Marker key={listing.id} position={[listing.latitude, listing.longitude]}>
               <Popup>
-                <strong>{listing.title}</strong>
-                <br />
-                {listing.employerName}
+                {/* Public listing detail (FR2) — Visitor-only view. Applying
+                    requires a Job Seeker account (Epic 2); the disabled
+                    button here is a scope boundary, not a working control. */}
+                <div className="max-h-64 max-w-xs overflow-y-auto">
+                  <strong className="block text-sm font-semibold">{listing.title}</strong>
+                  <p className="mt-1 text-sm text-slate-700">
+                    <span className="font-medium">Employeur : </span>
+                    {listing.employerName}
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    <span className="font-medium">Lieu : </span>
+                    {listing.location}
+                  </p>
+                  <p className="mt-2 text-sm text-slate-800">{listing.description}</p>
+                  {/* `disabled` alone pulls the button out of the tab order,
+                      so screen-reader/keyboard users would never see the
+                      `title` tooltip explaining why — the reason is also
+                      rendered as visible text below the button. */}
+                  <button
+                    type="button"
+                    disabled
+                    aria-describedby={`apply-reason-${listing.id}`}
+                    className="mt-3 w-full cursor-not-allowed rounded bg-slate-200 px-3 py-1.5 text-sm font-medium text-slate-500"
+                  >
+                    Postuler — connexion requise
+                  </button>
+                  <p id={`apply-reason-${listing.id}`} className="mt-1 text-xs text-slate-500">
+                    Créez un compte demandeur d'emploi pour postuler.
+                  </p>
+                </div>
               </Popup>
             </Marker>
           ))}

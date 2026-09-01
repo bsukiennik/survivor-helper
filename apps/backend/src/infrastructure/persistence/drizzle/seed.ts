@@ -19,6 +19,7 @@ const seedListings = [
     id: '11111111-1111-4111-8111-000000000001',
     title: 'Boulanger / Boulangère',
     employerName: 'Boulangerie du Marché',
+    location: 'Paris',
     description:
       "Poste de boulanger à temps plein, horaires du matin, formation assurée sur place.",
     latitude: 48.8566,
@@ -29,6 +30,7 @@ const seedListings = [
     id: '11111111-1111-4111-8111-000000000002',
     title: 'Développeur·se web junior',
     employerName: 'Atelier Numérique Lyonnais',
+    location: 'Lyon',
     description:
       'Stack React/Node, équipe de 5 personnes, télétravail partiel possible.',
     latitude: 45.764,
@@ -39,6 +41,7 @@ const seedListings = [
     id: '11111111-1111-4111-8111-000000000003',
     title: 'Agent·e d’entretien des espaces verts',
     employerName: 'Mairie de Bordeaux',
+    location: 'Bordeaux',
     description:
       'Entretien des parcs municipaux, contrat saisonnier renouvelable.',
     latitude: 44.8378,
@@ -49,6 +52,7 @@ const seedListings = [
     id: '11111111-1111-4111-8111-000000000004',
     title: 'Infirmier·ère à domicile',
     employerName: 'Réseau de Soins Toulousain',
+    location: 'Toulouse',
     description: 'Tournées à domicile sur le secteur de Toulouse et périphérie.',
     latitude: 43.6047,
     longitude: 1.4442,
@@ -58,6 +62,7 @@ const seedListings = [
     id: '11111111-1111-4111-8111-000000000005',
     title: 'Serveur / Serveuse',
     employerName: 'Brasserie du Vieux Port',
+    location: 'Marseille',
     description: 'Service midi et soir, pourboires, mutuelle entreprise.',
     latitude: 43.2965,
     longitude: 5.3698,
@@ -67,6 +72,7 @@ const seedListings = [
     id: '11111111-1111-4111-8111-000000000006',
     title: 'Technicien·ne de maintenance industrielle',
     employerName: 'Usine Métallurgique de Lille',
+    location: 'Lille',
     description:
       'Poste retiré du marché — conservé uniquement pour vérifier l’exclusion des annonces non publiées.',
     latitude: 50.6292,

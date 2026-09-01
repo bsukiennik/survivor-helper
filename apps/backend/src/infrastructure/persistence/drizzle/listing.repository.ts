@@ -17,6 +17,7 @@ export class DrizzleListingRepository implements ListingRepositoryPort {
       id: row.id,
       title: row.title,
       employerName: row.employerName,
+      location: row.location,
       description: row.description,
       latitude: row.latitude,
       longitude: row.longitude,

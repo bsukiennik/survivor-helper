@@ -35,6 +35,18 @@ France with markers for the seeded listings, no login required.
 Stop everything with `docker compose down` (add `-v` to also drop the
 Postgres volume and start clean next time).
 
+**If you already had the stack running before pulling new schema changes**,
+run `docker compose down -v` first. This project is early-stage with no real
+data yet, so migrations aren't written to backfill existing rows — a fresh
+volume is the expected way to pick up a new column.
+
+**If a native (non-Docker) `pnpm build`/`pnpm test` fails with `EACCES` on
+`apps/backend/dist`**: Docker leaves an empty, root-owned stub directory
+there on the host as a side effect of `dist`'s anonymous volume (it doesn't
+contain real build output — that stays inside the container). Remove it with
+`docker run --rm -v "$(pwd)/apps/backend:/work" alpine rm -rf /work/dist`
+(or `sudo rm -rf apps/backend/dist`) and re-run.
+
 ## Running things outside Docker
 
 Install dependencies once from the repo root:
