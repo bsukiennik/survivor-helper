@@ -149,3 +149,15 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-5-application-tracking.md`
   summary: "My Applications" doesn't surface whether the applied-to Listing is still published vs. archived/lapsed/removed — a Job Seeker can't tell from this page alone that a listing they applied to is no longer live.
   evidence: Blind-hunter review — legitimate future enhancement; out of this story's stated minimal scope (title/employerName only, no other Listing detail).
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-1-employer-account-creation-with-verification.md`
+  summary: employer_profiles.accountId has no onDelete cascade — same known landmine already deferred for job_seeker_profiles; a future account-deletion feature must delete employer_profiles before accounts or hit a FK violation.
+  evidence: Blind-hunter review — not reachable today (no account-deletion feature exists anywhere in this codebase yet); revisit alongside the job_seeker_profiles entry whenever that story lands.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-1-employer-account-creation-with-verification.md`
+  summary: Employer registration (account + employer_profiles + token issuance) is three separate non-transactional writes stitched together with application-level compensating deletes, not a single DB transaction — a process crash between any two steps leaves a permanently orphaned accounts row that nothing will ever clean up. The compensating-delete rollback (fixed during review) covers exception-based failures but not a hard process crash mid-flow.
+  evidence: Blind-hunter + verification-gap review — a true db.transaction() fix would require making the account/employer-profile repository ports transaction-aware, a bigger refactor than this story's scope; the compensating-delete pattern already matches this codebase's only prior precedent (Story 2.1's JobSeeker rollback).
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-1-employer-account-creation-with-verification.md`
+  summary: No uniqueness/dedupe check on companyName — two different Employer accounts can register with the identical company name today, with nothing flagging it.
+  evidence: Blind-hunter review — legitimate future anti-fraud consideration; out of this story's explicit scope (verification is a manual admin action, Epic 5's job).

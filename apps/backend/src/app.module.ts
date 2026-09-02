@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ApplicationModule } from './interfaces/application/application.module.js';
 import { AuthModule } from './interfaces/auth/auth.module.js';
+import { EmployerModule } from './interfaces/employer/employer.module.js';
 import { ListingsModule } from './interfaces/listings/listings.module.js';
 import { ProfileModule } from './interfaces/profile/profile.module.js';
 import { TilesModule } from './interfaces/tiles/tiles.module.js';
@@ -12,6 +13,6 @@ import { TilesModule } from './interfaces/tiles/tiles.module.js';
 // coexisting env-access patterns. Every consumer — in-app or standalone —
 // reads `process.env` directly and consistently instead.
 @Module({
-  imports: [ListingsModule, TilesModule, AuthModule, ProfileModule, ApplicationModule],
+  imports: [ListingsModule, TilesModule, AuthModule, ProfileModule, ApplicationModule, EmployerModule],
 })
 export class AppModule {}

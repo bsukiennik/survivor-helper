@@ -51,6 +51,34 @@ describe('Auth validation (e2e, ValidationPipe)', () => {
       .expect(400);
   });
 
+  it('rejects employer registration with a malformed email', async () => {
+    await supertest(app.getHttpServer())
+      .post('/auth/register/employer')
+      .send({ email: 'not-an-email', password: 'correcthorsebattery', companyName: 'Acme' })
+      .expect(400);
+  });
+
+  it('rejects employer registration with a too-short password', async () => {
+    await supertest(app.getHttpServer())
+      .post('/auth/register/employer')
+      .send({ email: 'a@b.com', password: 'short', companyName: 'Acme' })
+      .expect(400);
+  });
+
+  it('rejects employer registration with a missing companyName', async () => {
+    await supertest(app.getHttpServer())
+      .post('/auth/register/employer')
+      .send({ email: 'a@b.com', password: 'correcthorsebattery' })
+      .expect(400);
+  });
+
+  it('rejects employer registration with a blank companyName', async () => {
+    await supertest(app.getHttpServer())
+      .post('/auth/register/employer')
+      .send({ email: 'a@b.com', password: 'correcthorsebattery', companyName: '   ' })
+      .expect(400);
+  });
+
   it('rejects login with a malformed email', async () => {
     await supertest(app.getHttpServer())
       .post('/auth/login')

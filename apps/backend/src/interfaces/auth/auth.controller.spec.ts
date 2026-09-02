@@ -52,6 +52,50 @@ describe('AuthController', () => {
     });
   });
 
+  describe('registerEmployer', () => {
+    it('registers with role Employer plus the employerProfile input and returns the access token', async () => {
+      let receivedInput: unknown;
+      const controller = new AuthController(
+        makeRegisterUseCaseStub(async (input) => {
+          receivedInput = input;
+          return { accessToken: 'signed-token' };
+        }),
+        makeLoginUseCaseStub(async () => ({ accessToken: '' })),
+      );
+
+      const result = await controller.registerEmployer({
+        email: 'employer@x.com',
+        password: 'correcthorse',
+        companyName: 'Acme',
+      });
+
+      expect(result).toEqual({ accessToken: 'signed-token' });
+      expect(receivedInput).toEqual({
+        email: 'employer@x.com',
+        password: 'correcthorse',
+        role: 'Employer',
+        employerProfile: { companyName: 'Acme' },
+      });
+    });
+
+    it('maps a duplicate email to a 409 Conflict', async () => {
+      const controller = new AuthController(
+        makeRegisterUseCaseStub(async () => {
+          throw new EmailAlreadyRegisteredError('employer@x.com');
+        }),
+        makeLoginUseCaseStub(async () => ({ accessToken: '' })),
+      );
+
+      await expect(
+        controller.registerEmployer({
+          email: 'employer@x.com',
+          password: 'correcthorse',
+          companyName: 'Acme',
+        }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+  });
+
   describe('loginRoute', () => {
     it('returns the access token on valid credentials', async () => {
       const controller = new AuthController(

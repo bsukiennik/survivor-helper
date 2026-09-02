@@ -14,13 +14,15 @@ import { InvalidCredentialsError } from '../../domain/account/invalid-credential
 import { AuthResponseDto } from './dto/auth-response.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
+import { RegisterEmployerDto } from './dto/register-employer.dto.js';
 
 /**
- * `POST /auth/register` and `POST /auth/login` — no guard on either (a
- * visitor isn't authenticated yet by definition). Both always call the
- * shared provisioning path (AD-13) via the use cases below; this controller
- * is the only current caller of `RegisterAccountUseCase` and always passes
- * `role = 'JobSeeker'`.
+ * `POST /auth/register`, `POST /auth/register/employer` and
+ * `POST /auth/login` — no guard on any of them (a visitor isn't
+ * authenticated yet by definition). All registration routes call the shared
+ * provisioning path (AD-13) via `RegisterAccountUseCase`; `register` always
+ * passes `role = 'JobSeeker'` with no `employerProfile`, `registerEmployer`
+ * always passes `role = 'Employer'` plus `employerProfile: { companyName }`.
  */
 @ApiTags('auth')
 @Controller('auth')
@@ -39,6 +41,26 @@ export class AuthController {
         email: dto.email,
         password: dto.password,
         role: 'JobSeeker',
+      });
+      return AuthResponseDto.fromAccessToken(result.accessToken);
+    } catch (error) {
+      if (error instanceof EmailAlreadyRegisteredError) {
+        throw new ConflictException(error.message);
+      }
+      throw error;
+    }
+  }
+
+  @Post('register/employer')
+  @ApiOperation({ summary: 'Register a new Employer account (verification starts pending)' })
+  @ApiCreatedResponse({ type: AuthResponseDto })
+  async registerEmployer(@Body() dto: RegisterEmployerDto): Promise<AuthResponseDto> {
+    try {
+      const result = await this.registerAccount.execute({
+        email: dto.email,
+        password: dto.password,
+        role: 'Employer',
+        employerProfile: { companyName: dto.companyName },
       });
       return AuthResponseDto.fromAccessToken(result.accessToken);
     } catch (error) {
