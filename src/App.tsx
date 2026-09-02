@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { RegisterJobSeeker, RegisterEmployer } from './components/Auth';
+import { RegisterJobSeeker } from './components/RegisterJobSeeker';
+import { RegisterEmployer } from './components/RegisterEmployer';
 
 export function App() {
   const [tab, setTab] = useState<'seeker' | 'employer'>('seeker');
