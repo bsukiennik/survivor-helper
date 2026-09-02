@@ -1,47 +1,47 @@
-import { useState, FormEvent } from 'react';
-import { registerJobSeeker } from '../services/api';
+import { useState, FormEvent } from 'react'
+import { registerJobSeeker } from '../services/api'
 
 export function RegisterJobSeeker() {
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [skills, setSkills] = useState('');
-  const [experience, setExperience] = useState('');
-  const [availability, setAvailability] = useState('Immédiate');
+  const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [skills, setSkills] = useState('')
+  const [experience, setExperience] = useState('')
+  const [availability, setAvailability] = useState('Immédiate')
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   const fillExample = () => {
-    setFullName('Jean Dupont');
-    setEmail('jean.dupont@email.fr');
-    setPassword('Password123!');
-    setSkills('React, TypeScript');
-    setExperience('3 ans en développement web');
-    setAvailability('Immédiate');
-  };
+    setFullName('Jean Dupont')
+    setEmail('jean.dupont@email.fr')
+    setPassword('Password123!')
+    setSkills('React, TypeScript')
+    setExperience('3 ans en développement web')
+    setAvailability('Immédiate')
+  }
 
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
+    e.preventDefault()
+    setError('')
+    setSuccess('')
 
     if (password.length < 8) {
-      setError('Le mot de passe doit contenir au moins 8 caractères.');
-      return;
+      setError('Le mot de passe doit contenir au moins 8 caractères.')
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
     try {
-      await registerJobSeeker({ fullName, email, password, skills, experience, availability });
-      setSuccess(`Compte créé avec succès pour ${fullName} !`);
+      await registerJobSeeker({ fullName, email, password, skills, experience, availability })
+      setSuccess(`Compte créé avec succès pour ${fullName} !`)
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div>
@@ -137,5 +137,5 @@ export function RegisterJobSeeker() {
         </button>
       </form>
     </div>
-  );
+  )
 }

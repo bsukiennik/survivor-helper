@@ -1,44 +1,44 @@
-import { useState, FormEvent } from 'react';
-import { registerEmployer } from '../services/api';
+import { useState, FormEvent } from 'react'
+import { registerEmployer } from '../services/api'
 
 export function RegisterEmployer() {
-  const [companyName, setCompanyName] = useState('');
-  const [siret, setSiret] = useState('');
-  const [nom, setNom] = useState('');
-  const [prenom, setPrenom] = useState('');
-  const [statut, setStatut] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [companyName, setCompanyName] = useState('')
+  const [siret, setSiret] = useState('')
+  const [nom, setNom] = useState('')
+  const [prenom, setPrenom] = useState('')
+  const [statut, setStatut] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   const fillExample = () => {
-    setCompanyName('Tech Paris SAS');
-    setSiret('12345678901234');
-    setNom('Martin');
-    setPrenom('Alice');
-    setStatut('Responsable Recrutement');
-    setEmail('recrutement@tech-paris.fr');
-    setPassword('EmployerPass123!');
-  };
+    setCompanyName('Tech Paris SAS')
+    setSiret('12345678901234')
+    setNom('Martin')
+    setPrenom('Alice')
+    setStatut('Responsable Recrutement')
+    setEmail('recrutement@tech-paris.fr')
+    setPassword('EmployerPass123!')
+  }
 
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
+    e.preventDefault()
+    setError('')
+    setSuccess('')
 
-    setLoading(true);
+    setLoading(true)
     try {
-      await registerEmployer({ companyName, siret, nom, prenom, statut, email, password });
-      setSuccess(`Compte Employeur créé pour ${companyName} ! Statut : En attente de vérification`);
+      await registerEmployer({ companyName, siret, nom, prenom, statut, email, password })
+      setSuccess(`Compte Employeur créé pour ${companyName} ! Statut : En attente de vérification`)
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div>
@@ -157,5 +157,5 @@ export function RegisterEmployer() {
         </button>
       </form>
     </div>
-  );
+  )
 }

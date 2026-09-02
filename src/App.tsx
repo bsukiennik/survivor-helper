@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { RegisterJobSeeker } from './components/RegisterJobSeeker';
-import { RegisterEmployer } from './components/RegisterEmployer';
+import { useState } from 'react'
+import { RegisterJobSeeker } from './components/RegisterJobSeeker'
+import { RegisterEmployer } from './components/RegisterEmployer'
 
 export function App() {
-  const [tab, setTab] = useState<'seeker' | 'employer'>('seeker');
+  const [tab, setTab] = useState<'seeker' | 'employer'>('seeker')
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -36,7 +36,7 @@ export function App() {
         GéoEmploi — Ministère du Job et Bonheur © 2026.
       </footer>
     </div>
-  );
+  )
 }
 
-export default App;
+export default App
