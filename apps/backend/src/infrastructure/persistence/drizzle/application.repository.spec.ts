@@ -21,6 +21,8 @@ import { listingsTable } from './listing.schema.js';
 
 const TEST_EMAIL = '__test__application-repository@example.com';
 const OTHER_TEST_EMAIL = '__test__application-repository-other@example.com';
+const TEST_EMPLOYER_EMAIL = '__test__application-repository-employer@example.com';
+let testEmployerAccountId = '';
 const TEST_LISTING_A = '99999999-9999-4999-8999-000000000101';
 const TEST_LISTING_B = '99999999-9999-4999-8999-000000000102';
 // 9 seed listings for the 9th→10th-threshold race test below — distinct
@@ -41,23 +43,32 @@ describe('DrizzleApplicationRepository (integration, real Postgres)', () => {
 
     await db.delete(accountsTable).where(eq(accountsTable.email, TEST_EMAIL));
     await db.delete(accountsTable).where(eq(accountsTable.email, OTHER_TEST_EMAIL));
+    await db.delete(accountsTable).where(eq(accountsTable.email, TEST_EMPLOYER_EMAIL));
     const [account] = await db
       .insert(accountsTable)
       .values({ email: TEST_EMAIL, passwordHash: 'irrelevant', role: 'JobSeeker' })
       .returning();
     testAccountId = account.id;
 
+    const [employerAccount] = await db
+      .insert(accountsTable)
+      .values({ email: TEST_EMPLOYER_EMAIL, passwordHash: 'irrelevant', role: 'Employer' })
+      .returning();
+    testEmployerAccountId = employerAccount.id;
+
     await db
       .insert(listingsTable)
       .values(
         [TEST_LISTING_A, TEST_LISTING_B, ...TEST_LISTING_SEED].map((id, index) => ({
           id,
+          employerId: testEmployerAccountId,
           title: `__test__ listing ${index}`,
           employerName: 'Test Co',
           location: 'Testville',
           description: 'seeded by application.repository.spec.ts',
           latitude: 0,
           longitude: 0,
+          distributionRadiusKm: 10,
           status: 'published' as const,
         })),
       )
@@ -74,6 +85,7 @@ describe('DrizzleApplicationRepository (integration, real Postgres)', () => {
     await db.delete(applicationsTable).where(eq(applicationsTable.jobSeekerId, testAccountId));
     await db.delete(listingsTable).where(inArray(listingsTable.id, TEST_LISTING_IDS));
     await db.delete(accountsTable).where(eq(accountsTable.email, TEST_EMAIL));
+    await db.delete(accountsTable).where(eq(accountsTable.email, TEST_EMPLOYER_EMAIL));
     await closeDb();
   });
 

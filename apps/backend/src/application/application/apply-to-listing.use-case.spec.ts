@@ -10,12 +10,15 @@ import { ApplyToListingUseCase } from './apply-to-listing.use-case.js';
 const LISTING: Listing = {
   id: 'listing-1',
   title: 'Boulanger',
+  employerId: 'employer-1',
   employerName: 'Boulangerie du Marché',
   location: 'Paris',
   description: 'Poste à temps plein.',
   latitude: 48.8566,
   longitude: 2.3522,
+  distributionRadiusKm: 10,
   status: 'published',
+  createdAt: new Date('2026-01-01T00:00:00.000Z'),
 };
 
 const APPLICATION: Application = {
@@ -30,6 +33,8 @@ function makeListingRepository(overrides: Partial<ListingRepositoryPort> = {}): 
   return {
     findPublished: async () => [LISTING],
     findById: async () => LISTING,
+    create: async () => LISTING,
+    archiveExpiredListings: async () => 0,
     ...overrides,
   };
 }

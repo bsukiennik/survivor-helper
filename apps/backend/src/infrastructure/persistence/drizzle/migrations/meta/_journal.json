@@ -43,6 +43,13 @@
       "when": 1788327408924,
       "tag": "0005_graceful_cassandra_nova",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788328604053,
+      "tag": "0006_dear_nighthawk",
+      "breakpoints": true
     }
   ]
 }

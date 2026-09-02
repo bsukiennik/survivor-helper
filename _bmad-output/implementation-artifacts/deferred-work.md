@@ -161,3 +161,15 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-3-1-employer-account-creation-with-verification.md`
   summary: No uniqueness/dedupe check on companyName — two different Employer accounts can register with the identical company name today, with nothing flagging it.
   evidence: Blind-hunter review — legitimate future anti-fraud consideration; out of this story's explicit scope (verification is a manual admin action, Epic 5's job).
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-2-publish-a-geolocated-listing.md`
+  summary: distributionRadiusKm is captured, validated (capped at 10km), and persisted, but nothing anywhere reads it to actually gate who sees a Listing — the public GET /listings endpoint has no viewer-position parameter and returns every published Listing regardless of distance. The AC's own wording ("appears on the public/job-seeker map... within my Distribution Radius") implies this should eventually filter visibility, but this story's own spec never addressed it in Boundaries/Never — a genuine gap in the spec itself, not an implementer deviation.
+  evidence: Blind-hunter review, confirmed by re-reading the spec — implementing real distance-based filtering requires the public GET /listings path (Epic 1, already shipped) to accept a viewer position, out of this story's stated file scope. Needs a future story (likely Epic 4's real-time map work) to resolve.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-2-publish-a-geolocated-listing.md`
+  summary: No GET /me/listings (or any way) for an Employer to review/list what they've published — only POST exists.
+  evidence: Blind-hunter review — likely Story 3.5's job (its dashboard already needs to show per-Listing view/application counts).
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-3-2-publish-a-geolocated-listing.md`
+  summary: listings.employerId has no onDelete cascade — same known landmine already deferred for job_seeker_profiles/employer_profiles.
+  evidence: Blind-hunter review — not reachable today (no account-deletion feature exists); revisit alongside the other two entries whenever that story lands.
