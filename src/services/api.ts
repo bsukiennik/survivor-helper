@@ -15,9 +15,9 @@ export async function registerJobSeeker(data: any) {
 }
 
 export async function registerEmployer(data: any) {
-  const siret = data.siret ? data.siret.trim() : ''
-  if (siret.length !== 14 || isNaN(Number(siret))) {
-    throw new Error('Le numéro SIRET doit contenir exactement 14 chiffres.')
+  const siret = data.siret ? data.siret.replace(/\D/g, '') : ''
+  if (siret.length !== 14 || !/^\d{14}$/.test(siret)) {
+    throw new Error('Le numéro SIRET doit contenir exactement 14 chiffres (aucun caractère ou lettre autorisé).')
   }
 
   try {

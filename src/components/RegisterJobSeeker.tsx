@@ -8,6 +8,7 @@ export function RegisterJobSeeker() {
   const [skills, setSkills] = useState('')
   const [experience, setExperience] = useState('')
   const [availability, setAvailability] = useState('Immédiate')
+  const [rgpdConsent, setRgpdConsent] = useState(false)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -20,6 +21,7 @@ export function RegisterJobSeeker() {
     setSkills('React, TypeScript')
     setExperience('3 ans en développement web')
     setAvailability('Immédiate')
+    setRgpdConsent(true)
   }
 
   const handleSubmit = async (e: FormEvent) => {
@@ -32,9 +34,14 @@ export function RegisterJobSeeker() {
       return
     }
 
+    if (!rgpdConsent) {
+      setError('Vous devez accepter le traitement de vos données personnelles (RGPD) pour vous inscrire.')
+      return
+    }
+
     setLoading(true)
     try {
-      await registerJobSeeker({ fullName, email, password, skills, experience, availability })
+      await registerJobSeeker({ fullName, email, password, skills, experience, availability, rgpdConsent })
       setSuccess(`Compte créé avec succès pour ${fullName} !`)
     } catch (err: any) {
       setError(err.message)
@@ -130,6 +137,19 @@ export function RegisterJobSeeker() {
             <option value="Sous 1 mois">Sous 1 mois</option>
             <option value="Sous 3 mois">Sous 3 mois</option>
           </select>
+        </div>
+
+        <div className="form-group" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginTop: '1rem' }}>
+          <input
+            type="checkbox"
+            id="rgpd-seeker"
+            checked={rgpdConsent}
+            onChange={(e) => setRgpdConsent(e.target.checked)}
+            style={{ marginTop: '0.2rem' }}
+          />
+          <label htmlFor="rgpd-seeker" style={{ fontSize: '0.85rem', color: '#374151', fontWeight: 'normal' }}>
+            J'accepte expressément le traitement de mes données à caractère personnel (nom, e-mail, compétences, expérience et disponibilité) par le Ministère du Job et Bonheur aux fins de création de mon profil professionnel et d'instruction de mes candidatures, conformément à l'article 6.1.a du RGPD. *
+          </label>
         </div>
 
         <button type="submit" className="btn-primary" disabled={loading}>

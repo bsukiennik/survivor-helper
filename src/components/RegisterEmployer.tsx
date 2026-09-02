@@ -9,6 +9,7 @@ export function RegisterEmployer() {
   const [statut, setStatut] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rgpdConsent, setRgpdConsent] = useState(false)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -22,6 +23,7 @@ export function RegisterEmployer() {
     setStatut('Responsable Recrutement')
     setEmail('recrutement@tech-paris.fr')
     setPassword('EmployerPass123!')
+    setRgpdConsent(true)
   }
 
   const handleSubmit = async (e: FormEvent) => {
@@ -29,9 +31,20 @@ export function RegisterEmployer() {
     setError('')
     setSuccess('')
 
+    const cleanSiret = siret.replace(/\D/g, '')
+    if (cleanSiret.length !== 14 || !/^\d{14}$/.test(cleanSiret)) {
+      setError('Le numéro SIRET doit contenir exactement 14 chiffres (aucun caractère ou lettre autorisé).')
+      return
+    }
+
+    if (!rgpdConsent) {
+      setError('Vous devez accepter le traitement de vos données d\'entreprise et personnelles (RGPD) pour valider l\'inscription.')
+      return
+    }
+
     setLoading(true)
     try {
-      await registerEmployer({ companyName, siret, nom, prenom, statut, email, password })
+      await registerEmployer({ companyName, siret: cleanSiret, nom, prenom, statut, email, password, rgpdConsent })
       setSuccess(`Compte Employeur créé pour ${companyName} ! Statut : En attente de vérification`)
     } catch (err: any) {
       setError(err.message)
@@ -86,7 +99,7 @@ export function RegisterEmployer() {
             maxLength={14}
             placeholder="12345678901234"
             value={siret}
-            onChange={(e) => setSiret(e.target.value)}
+            onChange={(e) => setSiret(e.target.value.replace(/\D/g, ''))}
             required
           />
         </div>
@@ -150,6 +163,19 @@ export function RegisterEmployer() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+        </div>
+
+        <div className="form-group" style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginTop: '1rem' }}>
+          <input
+            type="checkbox"
+            id="rgpd-employer"
+            checked={rgpdConsent}
+            onChange={(e) => setRgpdConsent(e.target.checked)}
+            style={{ marginTop: '0.2rem' }}
+          />
+          <label htmlFor="rgpd-employer" style={{ fontSize: '0.85rem', color: '#374151', fontWeight: 'normal' }}>
+            J'accepte expressément le traitement et la conservation des données de l'entreprise et de son représentant (numéro SIRET, identité du représentant, fonction et adresse e-mail professionnelle) par le Ministère du Job et Bonheur aux fins de vérification d'activité et de gestion du compte employeur, conformément à l'article 6.1.a du RGPD. *
+          </label>
         </div>
 
         <button type="submit" className="btn-primary" disabled={loading}>
