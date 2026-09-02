@@ -168,3 +168,39 @@ textarea.form-control {
   color: #075985;
   border: 1px solid #BAE6FD;
 }
+
+.app-header {
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E5E7EB;
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand-block {
+  border-left: 3px solid #E1000F;
+  padding-left: 0.6rem;
+  font-weight: 800;
+  font-size: 0.7rem;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: #000000;
+  font-family: var(--font-title);
+}
+
+.app-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--color-brand-blue);
+  font-family: var(--font-title);
+}
+
+.app-footer {
+  background-color: #FFFFFF;
+  border-top: 1px solid #E5E7EB;
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #6B7280;
+}
