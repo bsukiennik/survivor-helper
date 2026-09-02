@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { count, eq } from 'drizzle-orm';
-import type { ApplicationRepositoryPort } from '../../../application/ports/application-repository.port.js';
+import { count, desc, eq } from 'drizzle-orm';
+import type {
+  ApplicationRepositoryPort,
+  MyApplicationRow,
+} from '../../../application/ports/application-repository.port.js';
 import type { Application } from '../../../domain/application/application.entity.js';
 import { accountsTable } from './account.schema.js';
 import { applicationsTable } from './application.schema.js';
 import { getDb } from './db.js';
+import { listingsTable } from './listing.schema.js';
 
 @Injectable()
 export class DrizzleApplicationRepository implements ApplicationRepositoryPort {
@@ -58,6 +62,29 @@ export class DrizzleApplicationRepository implements ApplicationRepositoryPort {
       .from(applicationsTable)
       .where(eq(applicationsTable.jobSeekerId, jobSeekerId));
     return value;
+  }
+
+  // `GET /me/applications` (Story 2.5) — this codebase's first
+  // `innerJoin`: Applications joined to their Listing, scoped strictly to
+  // `jobSeekerId` (Boundaries & Constraints — never accepts an id from the
+  // caller), newest first. Zero rows returns `[]`, not an error.
+  async findByJobSeekerWithListing(jobSeekerId: string): Promise<MyApplicationRow[]> {
+    return getDb()
+      .select({
+        id: applicationsTable.id,
+        listingId: applicationsTable.listingId,
+        listingTitle: listingsTable.title,
+        employerName: listingsTable.employerName,
+        status: applicationsTable.status,
+        createdAt: applicationsTable.createdAt,
+      })
+      .from(applicationsTable)
+      .innerJoin(listingsTable, eq(applicationsTable.listingId, listingsTable.id))
+      .where(eq(applicationsTable.jobSeekerId, jobSeekerId))
+      // `id` as a tiebreaker: `createdAt` alone isn't guaranteed unique
+      // (same-millisecond inserts), so ordering by it alone risks a
+      // non-deterministic "newest first" for near-simultaneous catches.
+      .orderBy(desc(applicationsTable.createdAt), desc(applicationsTable.id));
   }
 
   private toDomain(row: typeof applicationsTable.$inferSelect): Application {

@@ -1,6 +1,21 @@
 import type { Application } from '../../domain/application/application.entity.js';
 
 /**
+ * One row of `GET /me/applications` (Story 2.5) — an Application joined
+ * with just enough of its Listing (title, employer) to be meaningful.
+ * `status` is the raw persisted string, never mapped to a label here
+ * (Boundaries & Constraints).
+ */
+export interface MyApplicationRow {
+  readonly id: string;
+  readonly listingId: string;
+  readonly listingTitle: string;
+  readonly employerName: string;
+  readonly status: string;
+  readonly createdAt: Date;
+}
+
+/**
  * Port (AD-1) — the domain/application layer depends on this interface only.
  * The concrete implementation lives behind `infrastructure/persistence/drizzle`.
  *
@@ -29,6 +44,13 @@ export interface ApplicationRepositoryPort {
    * `applyToListing`, but outside any transaction/lock.
    */
   countByJobSeeker(jobSeekerId: string): Promise<number>;
+
+  /**
+   * `GET /me/applications` (Story 2.5) — this codebase's first Drizzle
+   * join. Scoped strictly to `jobSeekerId`; newest first. Zero rows is
+   * `[]`, not an error.
+   */
+  findByJobSeekerWithListing(jobSeekerId: string): Promise<MyApplicationRow[]>;
 }
 
 export const APPLICATION_REPOSITORY_PORT = Symbol('APPLICATION_REPOSITORY_PORT');

@@ -20,6 +20,7 @@ import { listingsTable } from './listing.schema.js';
  */
 
 const TEST_EMAIL = '__test__application-repository@example.com';
+const OTHER_TEST_EMAIL = '__test__application-repository-other@example.com';
 const TEST_LISTING_A = '99999999-9999-4999-8999-000000000101';
 const TEST_LISTING_B = '99999999-9999-4999-8999-000000000102';
 // 9 seed listings for the 9th→10th-threshold race test below — distinct
@@ -39,6 +40,7 @@ describe('DrizzleApplicationRepository (integration, real Postgres)', () => {
     const db = getDb();
 
     await db.delete(accountsTable).where(eq(accountsTable.email, TEST_EMAIL));
+    await db.delete(accountsTable).where(eq(accountsTable.email, OTHER_TEST_EMAIL));
     const [account] = await db
       .insert(accountsTable)
       .values({ email: TEST_EMAIL, passwordHash: 'irrelevant', role: 'JobSeeker' })
@@ -211,5 +213,66 @@ describe('DrizzleApplicationRepository (integration, real Postgres)', () => {
     } finally {
       await rawClient.end();
     }
+  });
+
+  describe('findByJobSeekerWithListing (Story 2.5, first Drizzle join)', () => {
+    it('returns [] (not an error) for an account with no Applications', async () => {
+      const repository = new DrizzleApplicationRepository();
+
+      const rows = await repository.findByJobSeekerWithListing(testAccountId);
+
+      expect(rows).toEqual([]);
+    });
+
+    it('returns each Application joined with its Listing title/employer, newest first', async () => {
+      const repository = new DrizzleApplicationRepository();
+      await repository.applyToListing({ jobSeekerId: testAccountId, listingId: TEST_LISTING_A });
+      await repository.applyToListing({ jobSeekerId: testAccountId, listingId: TEST_LISTING_B });
+
+      const rows = await repository.findByJobSeekerWithListing(testAccountId);
+
+      expect(rows).toHaveLength(2);
+      // TEST_LISTING_B was caught second, so it's newest first.
+      expect(rows[0]?.listingId).toBe(TEST_LISTING_B);
+      expect(rows[0]?.listingTitle).toBe('__test__ listing 1');
+      expect(rows[0]?.employerName).toBe('Test Co');
+      expect(rows[0]?.status).toBe('submitted');
+      expect(rows[1]?.listingId).toBe(TEST_LISTING_A);
+    });
+
+    it("reflects a seeded row's non-default status verbatim", async () => {
+      const repository = new DrizzleApplicationRepository();
+      await repository.applyToListing({ jobSeekerId: testAccountId, listingId: TEST_LISTING_A });
+      await getDb()
+        .update(applicationsTable)
+        .set({ status: 'shortlisted' })
+        .where(eq(applicationsTable.jobSeekerId, testAccountId));
+
+      const rows = await repository.findByJobSeekerWithListing(testAccountId);
+
+      expect(rows[0]?.status).toBe('shortlisted');
+    });
+
+    it("never returns another Job Seeker's Applications", async () => {
+      const db = getDb();
+      const [otherAccount] = await db
+        .insert(accountsTable)
+        .values({ email: OTHER_TEST_EMAIL, passwordHash: 'irrelevant', role: 'JobSeeker' })
+        .returning();
+
+      try {
+        const repository = new DrizzleApplicationRepository();
+        await repository.applyToListing({ jobSeekerId: testAccountId, listingId: TEST_LISTING_A });
+        await repository.applyToListing({ jobSeekerId: otherAccount.id, listingId: TEST_LISTING_B });
+
+        const rows = await repository.findByJobSeekerWithListing(testAccountId);
+
+        expect(rows).toHaveLength(1);
+        expect(rows[0]?.listingId).toBe(TEST_LISTING_A);
+      } finally {
+        await db.delete(applicationsTable).where(eq(applicationsTable.jobSeekerId, otherAccount.id));
+        await db.delete(accountsTable).where(eq(accountsTable.id, otherAccount.id));
+      }
+    });
   });
 });

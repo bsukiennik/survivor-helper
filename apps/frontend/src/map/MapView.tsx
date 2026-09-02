@@ -235,6 +235,9 @@ export function MapView(): React.JSX.Element {
             <Link to="/badges" className="font-medium text-amber-700 underline">
               Mes badges
             </Link>
+            <Link to="/applications" className="font-medium text-amber-700 underline">
+              Mes candidatures
+            </Link>
             <span>{auth.email}</span>
             <button type="button" onClick={handleLogout} className="text-slate-600 underline">
               Se déconnecter

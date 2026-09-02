@@ -3,6 +3,8 @@ import type { Response } from 'express';
 import { describe, expect, it, vi } from 'vitest';
 import type { ApplyToListingResult } from '../../application/application/apply-to-listing.use-case.js';
 import { ApplyToListingUseCase } from '../../application/application/apply-to-listing.use-case.js';
+import type { ListMyApplicationsUseCase } from '../../application/application/list-my-applications.use-case.js';
+import type { MyApplicationRow } from '../../application/ports/application-repository.port.js';
 import type { Application } from '../../domain/application/application.entity.js';
 import { ListingNotFoundError } from '../../domain/listing/listing-not-found.error.js';
 import type { AuthenticatedUser } from '../auth/jwt-auth.guard.js';
@@ -31,6 +33,12 @@ function makeUseCaseStub(
   return { execute } as unknown as ApplyToListingUseCase;
 }
 
+function makeListUseCaseStub(
+  execute: (jobSeekerId: string) => Promise<MyApplicationRow[]> = async () => [],
+): ListMyApplicationsUseCase {
+  return { execute } as unknown as ListMyApplicationsUseCase;
+}
+
 function makeResStub() {
   const res = { status: vi.fn() };
   res.status.mockReturnValue(res);
@@ -45,7 +53,10 @@ function makeDto(listingId: string): CatchDto {
 
 describe('ApplicationController', () => {
   it('responds 201 with the created Application and catchCount on first catch', async () => {
-    const controller = new ApplicationController(makeUseCaseStub(async () => RESULT));
+    const controller = new ApplicationController(
+      makeUseCaseStub(async () => RESULT),
+      makeListUseCaseStub(),
+    );
     const res = makeResStub();
 
     const result = await controller.apply(USER, makeDto('listing-1'), res);
@@ -63,6 +74,7 @@ describe('ApplicationController', () => {
   it('responds 201 with permisDeTravailUnlocked: true on the 10th catch', async () => {
     const controller = new ApplicationController(
       makeUseCaseStub(async () => ({ ...RESULT, catchCount: 10, permisDeTravailUnlocked: true })),
+      makeListUseCaseStub(),
     );
     const res = makeResStub();
 
@@ -79,7 +91,10 @@ describe('ApplicationController', () => {
   });
 
   it('responds 200 with alreadyApplied: true, catchCount: null, permisDeTravailUnlocked: false on a repeat catch, no error', async () => {
-    const controller = new ApplicationController(makeUseCaseStub(async () => null));
+    const controller = new ApplicationController(
+      makeUseCaseStub(async () => null),
+      makeListUseCaseStub(),
+    );
     const res = makeResStub();
 
     const result = await controller.apply(USER, makeDto('listing-1'), res);
@@ -99,6 +114,7 @@ describe('ApplicationController', () => {
       makeUseCaseStub(async () => {
         throw new ListingNotFoundError('missing-listing');
       }),
+      makeListUseCaseStub(),
     );
     const res = makeResStub();
 
@@ -115,11 +131,79 @@ describe('ApplicationController', () => {
         return RESULT;
       },
     } as unknown as ApplyToListingUseCase;
-    const controller = new ApplicationController(useCase);
+    const controller = new ApplicationController(useCase, makeListUseCaseStub());
     const res = makeResStub();
 
     await controller.apply(USER, makeDto('listing-1'), res);
 
     expect(executedWith).toEqual({ jobSeekerId: 'account-1', listingId: 'listing-1' });
+  });
+});
+
+describe('ApplicationController.list (GET /me/applications)', () => {
+  const ROW: MyApplicationRow = {
+    id: 'application-1',
+    listingId: 'listing-1',
+    listingTitle: 'Boulanger / Boulangère',
+    employerName: 'Boulangerie du Marché',
+    status: 'submitted',
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+  };
+
+  it('returns [] (not an error) for a fresh account with no Applications', async () => {
+    const controller = new ApplicationController(
+      makeUseCaseStub(async () => RESULT),
+      makeListUseCaseStub(async () => []),
+    );
+
+    const result = await controller.list(USER);
+
+    expect(result).toEqual([]);
+  });
+
+  it('maps each row to a DTO with listing title/employer/status', async () => {
+    const controller = new ApplicationController(
+      makeUseCaseStub(async () => RESULT),
+      makeListUseCaseStub(async () => [ROW]),
+    );
+
+    const result = await controller.list(USER);
+
+    expect(result).toEqual([
+      {
+        id: 'application-1',
+        listingId: 'listing-1',
+        listingTitle: 'Boulanger / Boulangère',
+        employerName: 'Boulangerie du Marché',
+        status: 'submitted',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+    ]);
+  });
+
+  it('reflects a seeded non-default status verbatim', async () => {
+    const controller = new ApplicationController(
+      makeUseCaseStub(async () => RESULT),
+      makeListUseCaseStub(async () => [{ ...ROW, status: 'shortlisted' }]),
+    );
+
+    const result = await controller.list(USER);
+
+    expect(result[0]?.status).toBe('shortlisted');
+  });
+
+  it('queries the use case with the authenticated user id, not anything from the request', async () => {
+    let queriedWith = '';
+    const controller = new ApplicationController(
+      makeUseCaseStub(async () => RESULT),
+      makeListUseCaseStub(async (jobSeekerId) => {
+        queriedWith = jobSeekerId;
+        return [];
+      }),
+    );
+
+    await controller.list(USER);
+
+    expect(queriedWith).toBe('account-1');
   });
 });

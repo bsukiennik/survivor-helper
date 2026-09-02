@@ -141,3 +141,11 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-2-4-catch-count-badges-permis-de-travail-unlock.md`
   summary: the "exactly-once" 9th→10th unlock guarantee is proven at the repository/transaction level (real Postgres, real row lock) but not through a full HTTP-request-path (controller/e2e) concurrency test — two real concurrent POST /me/applications requests racing through Nest's request pipeline has never been exercised.
   evidence: Blind-hunter review — the repository-level integration test already exercises the actual locking mechanism, so this is lower-priority hardening, not a known gap in current coverage.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-5-application-tracking.md`
+  summary: findByJobSeekerWithListing uses an innerJoin, so an Application whose Listing row was deleted would silently vanish from "My Applications" instead of showing a placeholder/fallback.
+  evidence: Edge-case-hunter review — not reachable today (no Listing-deletion feature exists anywhere in this codebase yet, same precondition as the FK-violation gap already deferred from Story 2.3); revisit if/when a Listing-deletion path lands.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-2-5-application-tracking.md`
+  summary: "My Applications" doesn't surface whether the applied-to Listing is still published vs. archived/lapsed/removed — a Job Seeker can't tell from this page alone that a listing they applied to is no longer live.
+  evidence: Blind-hunter review — legitimate future enhancement; out of this story's stated minimal scope (title/employerName only, no other Listing detail).

@@ -1,4 +1,4 @@
-import { Body, Controller, NotFoundException, Post, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, NotFoundException, Post, Res, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -11,6 +11,7 @@ import {
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { ApplyToListingUseCase } from '../../application/application/apply-to-listing.use-case.js';
+import { ListMyApplicationsUseCase } from '../../application/application/list-my-applications.use-case.js';
 import { ListingNotFoundError } from '../../domain/listing/listing-not-found.error.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import type { AuthenticatedUser } from '../auth/jwt-auth.guard.js';
@@ -19,6 +20,7 @@ import { Roles } from '../auth/roles.decorator.js';
 import { RolesGuard } from '../auth/roles.guard.js';
 import { ApplicationResponseDto } from './dto/application-response.dto.js';
 import { CatchDto } from './dto/catch.dto.js';
+import { MyApplicationDto } from './dto/my-application.dto.js';
 
 /**
  * `POST /me/applications` — first live route stacking both guards
@@ -34,7 +36,20 @@ import { CatchDto } from './dto/catch.dto.js';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('JobSeeker')
 export class ApplicationController {
-  constructor(private readonly applyToListing: ApplyToListingUseCase) {}
+  constructor(
+    private readonly applyToListing: ApplyToListingUseCase,
+    private readonly listMyApplications: ListMyApplicationsUseCase,
+  ) {}
+
+  @Get()
+  @ApiOperation({ summary: "List the authenticated Job Seeker's Applications, newest first" })
+  @ApiOkResponse({ type: MyApplicationDto, isArray: true })
+  @ApiUnauthorizedResponse()
+  @ApiForbiddenResponse()
+  async list(@CurrentUser() user: AuthenticatedUser): Promise<MyApplicationDto[]> {
+    const rows = await this.listMyApplications.execute(user.id);
+    return rows.map((row) => MyApplicationDto.fromDomain(row));
+  }
 
   @Post()
   @ApiOperation({ summary: 'Catch/apply to a Listing as the authenticated Job Seeker' })

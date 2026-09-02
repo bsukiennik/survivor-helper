@@ -474,4 +474,22 @@ describe('MapView', () => {
     const link = screen.getByRole('link', { name: 'Mes badges' });
     expect(link.getAttribute('href')).toBe('/badges');
   });
+
+  it('shows a "Mes candidatures" link to /applications only when an account is logged in', () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => [] })));
+
+    renderMapView();
+    expect(screen.queryByRole('link', { name: 'Mes candidatures' })).toBeNull();
+
+    cleanup();
+    stubWorkingLocalStorage();
+    localStorage.setItem(
+      'geoemploi.auth',
+      JSON.stringify({ accessToken: 'token-abc', email: 'a@b.com' }),
+    );
+
+    renderMapView();
+    const link = screen.getByRole('link', { name: 'Mes candidatures' });
+    expect(link.getAttribute('href')).toBe('/applications');
+  });
 });
